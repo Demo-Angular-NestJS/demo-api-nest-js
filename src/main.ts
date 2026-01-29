@@ -1,15 +1,20 @@
 import { NestFactory, Reflector } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { ClassSerializerInterceptor, ValidationPipe, VersioningType } from '@nestjs/common';
+import cookieParser from 'cookie-parser';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
-  // Set the prefix for all routes defined in the application
-  app.setGlobalPrefix('api');
+  app.setGlobalPrefix('api'); // Set the prefix for all routes defined in the application
   app.enableVersioning({
     type: VersioningType.URI,
     defaultVersion: '1', // Automatically adds /v1/ to all routes
+  });
+  app.use(cookieParser()); // Essential for reading cookies
+  app.enableCors({
+    origin: 'http://localhost:4000', // Your frontend URL
+    credentials: true,
   });
   app.useGlobalPipes(
     new ValidationPipe({
