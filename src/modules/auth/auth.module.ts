@@ -1,14 +1,14 @@
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 import { PassportModule } from '@nestjs/passport';
-import { User, UserSchema } from '../user/schemas/user.schema';
 import { JwtModule } from '@nestjs/jwt';
-import { AuthService } from './auth.service';
-import { JwtStrategy } from './strategies/jwt.strategy';
-import { AuthController } from './auth.controller';
-import { UserRepository } from '../user/user.repository';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { RefreshJwtStrategy } from './strategies/refresh-jwt.strategy';
+import { StringValue } from 'ms';
+import { User, UserSchema } from 'modules/user/schemas/user.schema';
+import { AuthController } from './auth.controller';
+import { AuthService } from './auth.service';
+import { UserRepository } from 'modules/user/user.repository';
+import { JwtStrategy } from './strategies/jwt.strategy';
 
 @Module({
   imports: [
@@ -17,14 +17,18 @@ import { RefreshJwtStrategy } from './strategies/refresh-jwt.strategy';
     JwtModule.registerAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
-      useFactory: async (configService: ConfigService) => ({
+      useFactory: async () => ({
         secret: process.env.JWT_ACCESS_SECRET,
-        signOptions: { expiresIn: '15min' },
+        signOptions: { expiresIn: (process.env.JWT_EXPIRES_IN || '15m') as StringValue | number },
       }),
     }),
   ],
   controllers: [AuthController],
-  providers: [AuthService, UserRepository, JwtStrategy, RefreshJwtStrategy],
-  exports: [AuthService], // Export service if AuthModule needs it
+  providers: [
+    AuthService,
+    UserRepository,
+    JwtStrategy,
+  ],
+  exports: [AuthService],
 })
 export class AuthModule { }

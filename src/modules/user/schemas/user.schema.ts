@@ -22,6 +22,18 @@ export class User extends Document {
 
   @Prop({ default: false })
   isAdmin: boolean;
+
+  @Prop({ type: String })
+  createdBy: string;
+
+  @Prop()
+  createdAt: Date;
+
+  @Prop({ type: String })
+  updatedBy: string;
+
+  @Prop()
+  updatedAt: Date;
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);

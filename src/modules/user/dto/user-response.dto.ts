@@ -2,7 +2,7 @@ import { Expose, Transform } from 'class-transformer';
 
 export class UserResponseDTO {
     @Expose()
-    @Transform(({ obj }) => obj._id?.toString()) // Explicitly map _id to id
+    @Transform(({ obj }) => obj._id?.toString() || obj.id?.toString())
     id: string;
 
     @Expose()
@@ -17,7 +17,22 @@ export class UserResponseDTO {
     @Expose()
     isAdmin: boolean;
 
-    constructor(partial: Partial<UserResponseDTO>) {
-        Object.assign(this, partial);
+    @Expose()
+    createdBy: string;
+    
+    @Expose()
+    createdAt: Date;
+    
+    @Expose() 
+    updatedBy: string;
+    
+    @Expose()
+    updatedAt: Date;
+
+    constructor(partial: Partial<any>) {
+        if (partial) {
+            const data = partial._doc ? partial._doc : partial;
+            Object.assign(this, data);
+        }
     }
 }

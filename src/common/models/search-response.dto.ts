@@ -1,12 +1,12 @@
-import { PaginationMetaDTO } from './pagination-meta.dto';
 import { Expose, Type } from 'class-transformer';
+import { PaginationMetaDTO } from './pagination-meta.dto';
 
 export class SearchResponseDTO<T> {
   @Expose()
   data: T[];
 
   @Expose()
-  @Type(() => PaginationMetaDTO) // Tells transformer how to handle this object
+  @Type(() => PaginationMetaDTO)
   meta: PaginationMetaDTO;
 
   constructor(data: T[], meta: PaginationMetaDTO) {

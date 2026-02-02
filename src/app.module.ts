@@ -1,10 +1,12 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
-import { DatabaseModule } from './database/database.module';
-import { UserModule } from './modules/user/user.module';
-import { AuthModule } from './modules/auth/auth.module';
-import { APP_GUARD } from '@nestjs/core';
-import { JwtAuthGuard } from './common/guards/jwt.auth.guard';
+import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
+import { JwtService } from '@nestjs/jwt';
+import { JwtAuthGuard, RefreshSessionInterceptor } from 'common';
+import { DatabaseModule } from 'database';
+import { AuthModule } from 'modules/auth/auth.module';
+import { UserModule } from 'modules/user/user.module';
+import { SharedModule } from 'share.module';
 
 @Module({
   imports: [
@@ -14,14 +16,20 @@ import { JwtAuthGuard } from './common/guards/jwt.auth.guard';
     }),
     // 2. Async Mongoose Setup
     DatabaseModule,
+    SharedModule,
     AuthModule,
     UserModule,
   ],
   controllers: [],
   providers: [
+    JwtService,
     {
       provide: APP_GUARD,
       useClass: JwtAuthGuard,
+    },
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: RefreshSessionInterceptor, // Extends session for all routes
     },
   ],
 })

@@ -1,18 +1,20 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, Patch, Post, Query, Req } from '@nestjs/common';
+import { Document, Types } from 'mongoose';
 import { UserService } from './user.service';
+import { ParseObjectIdPipe, SearchRequestDTO, SearchResponseDTO } from 'common';
+import type { AuthenticatedRequestModel } from 'common/models';
+import { UserResponseDTO } from './dto/user-response.dto';
 import { CreateUserDTO } from './dto/create-user.dto';
 import { UpdateUserDTO } from './dto/update-user.dto';
-import { UserSearchCriteriaDTO } from './dto/user-search-criteria.dto';
-import { SearchResponseDTO } from 'src/models/search-response.dto';
-import { UserResponseDTO } from './dto/user-response.dto';
-import { Document } from 'mongoose';
 
 @Controller('user')
 export class UserController {
-  constructor(private readonly userService: UserService) { }
+  constructor(
+    private readonly userService: UserService,
+  ) { }
 
   @Get()
-  async findAll(@Query() query: UserSearchCriteriaDTO) {
+  async findAll(@Query() query: SearchRequestDTO) {
     const result = await this.userService.findAll(query);
     const userInstances = result.data.map(
       (user) => new UserResponseDTO(user instanceof Document ? user.toObject() : user)
@@ -21,25 +23,31 @@ export class UserController {
     return new SearchResponseDTO(userInstances, result.meta);
   }
 
-  @Post()
-  create(@Body() createUserDTO: CreateUserDTO) {
-    return this.userService.create(createUserDTO);
+  @Get(':id')
+  async findById(@Param('id') id: string) {
+    return await this.userService.findOne({ _id: new Types.ObjectId(id) });
   }
 
-  @Get(':id')
-  async findOne(@Param('id') id: string) {
-    const user = await this.userService.findOne(id);
-    return new UserResponseDTO(user.toObject());
+  @Post()
+  async create(
+    @Body() createUserDto: CreateUserDTO,
+    @Req() req: AuthenticatedRequestModel,
+  ) {
+    return await this.userService.create(createUserDto, req?.user?.sub);
   }
 
   @Patch(':id')
-  async update(@Param('id') id: string, @Body() updateUserDTO: UpdateUserDTO) {
-    const updated = await this.userService.update(id, updateUserDTO);
-    return new UserResponseDTO(updated.toObject());
+  async update(
+    @Param('id') id: string,
+    @Body() updateUserDto: UpdateUserDTO,
+    @Req() req: AuthenticatedRequestModel,
+  ) {
+    return await this.userService.update({ _id: id }, updateUserDto, req?.user?.sub);
   }
 
   @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.userService.remove(id);
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async remove(@Param('id', ParseObjectIdPipe) id: string) {
+    return await this.userService.delete({ _id: id });
   }
 }

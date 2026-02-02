@@ -26,16 +26,22 @@ async function bootstrap() {
   });
   //#endregion
 
+  app.useGlobalInterceptors(
+    new ClassSerializerInterceptor(app.get(Reflector), {
+      strategy: 'excludeAll', 
+    }),
+  );
+
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true, // Strips away properties that don't exist in the DTO
       forbidNonWhitelisted: true, // Throws error if unknown properties are sent
       transform: true, // Automatically transforms payloads to DTO instances
+      transformOptions: {
+        enableImplicitConversion: true, // Helps with DTOs converstion
+      },
     }),
   );
-  app.useGlobalInterceptors(new ClassSerializerInterceptor(app.get(Reflector), {
-    strategy: 'excludeAll', // Only if you want strict mode app-wide
-  }));
 
   await app.listen(process.env.PORT ?? 3000);
 }

@@ -1,6 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-member-access */
-/* eslint-disable @typescript-eslint/no-unsafe-return */
-/* eslint-disable @typescript-eslint/no-unsafe-call */
 import { Expose, Transform } from 'class-transformer';
 import {
   IsEmail,
@@ -12,7 +9,8 @@ import {
 
 export class CreateUserDTO {
   @Expose({ name: 'id' })
-  @Transform(({ value }) => value?.toString()) // Converts ObjectId to string
+  @IsOptional()
+  @Transform(({ value }) => value?.toString())
   _id: string;
 
   @IsString()

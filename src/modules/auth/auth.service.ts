@@ -1,81 +1,36 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
-import { JwtService } from '@nestjs/jwt';
-import * as bcrypt from 'bcrypt';
-import { UserRepository } from '../user/user.repository';
-import type { Response } from 'express';
+import { ForbiddenException, Injectable, UnauthorizedException } from '@nestjs/common';
+import { User } from '../user/schemas/user.schema';
+import { UserRepository } from 'modules/user/user.repository';
+import { BCryptService } from 'common';
 import { LoginRequestDTO } from './dto/login-request.dto';
 
 @Injectable()
 export class AuthService {
   constructor(
-    private userRepository: UserRepository,
-    private jwtService: JwtService,
+    private userRepository: UserRepository,    
+    private bcryptService: BCryptService,
   ) { }
 
-  /**
-   * Validate user and return a signed JWT string
-   */
-  async login(loginRequestDTO: LoginRequestDTO): Promise<{ accessToken: string; refreshToken: string }> {
+  async login(loginRequestDTO: LoginRequestDTO): Promise<User> {
     const { email, password } = loginRequestDTO;
+    const user = await this.validateUser(email, password);
 
-    // 1. Fetch user from MongoDB
-    const user = await this.userRepository.findOne({ email, password });
+    if (user && !user?.isActive) {
+      throw new ForbiddenException('Please contact to support for more details');
+    }
 
-    // Nota: Deberías usar bcrypt.compare aquí
-    // (await bcrypt.compare(password, user.password))
     if (user) {
-      const payload = {
-        username: user.userName,
-        email: user.email,
-        sub: user._id,
-      };
-
-      // Firmar Access Token
-      const accessToken = this.jwtService.sign(payload, {
-        secret: process.env.JWT_ACCESS_SECRET,
-        expiresIn: '15m',
-      });
-
-      // Firmar Refresh Token
-      const refreshToken = this.jwtService.sign(payload, {
-        secret: process.env.JWT_REFRESH_SECRET,
-        expiresIn: '30m',
-      });
-
-      return { accessToken, refreshToken };
+      return user;
     }
 
     throw new UnauthorizedException('Invalid username or password');
   }
 
-  async refreshTokens(userId: string, res: Response) {
-    const accessToken = this.jwtService.sign({ sub: userId }, {
-      secret: process.env.JWT_ACCESS_SECRET,
-      expiresIn: '15m'
-    });
-
-    const newRefreshToken = this.jwtService.sign({ sub: userId }, {
-      secret: process.env.JWT_REFRESH_SECRET,
-      expiresIn: '30m'
-    });
-
-    // Set the cookie on the response
-    res.cookie('refresh_token', newRefreshToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
-      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-    });
-
-    return { access_token: accessToken };
-  }
-
-  async validateUser(email: string, pass: string): Promise<any> {
+  async validateUser(email: string, pass: string): Promise<User | null> {
     const user = await this.userRepository.findOne({ email });
 
-    if (user && (await bcrypt.compare(pass, user?.password ?? ''))) {
-      const { password, ...result } = user.toObject();
-      return result;
+    if (user && (await this.bcryptService.comparePassword(pass, user?.password ?? ''))) {
+      return user;
     }
 
     return null;

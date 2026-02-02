@@ -46,6 +46,11 @@
     "typescript": "^5.7.3"
   },
   "jest": {
+    "moduleNameMapper": {
+      "^@common/(.*)$": "<rootDir>/common/$1",
+      "^@db/(.*)$": "<rootDir>/database/$1",
+      "^@m/(.*)$": "<rootDir>/modules/$1"
+    },
     "moduleFileExtensions": [
       "js",
       "json",

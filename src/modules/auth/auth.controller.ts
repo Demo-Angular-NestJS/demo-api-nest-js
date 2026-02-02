@@ -1,15 +1,19 @@
-import { Controller, Post, Body, Res, Get, UseGuards, Req, UnauthorizedException } from '@nestjs/common';
+import { Controller, Post, Body, Res, Get, Req } from '@nestjs/common';
 import type { Response, Request } from 'express';
+import { JwtService } from '@nestjs/jwt';
+import { StringValue } from 'ms';
 import { AuthService } from './auth.service';
-import { Public } from 'src/common/decorators/public.decorator';
-import { AuthGuard } from '@nestjs/passport';
+import { JWTTokenDTO, Public, StringService } from 'common';
 import { LoginRequestDTO } from './dto/login-request.dto';
-
-const ACCESS_TOKEN_EXPIRY = 15 * 60 * 1000; // 900,000
+import { LoginResponseDTO } from './dto/login-response.dto';
 
 @Controller('auth')
 export class AuthController {
-    constructor(private authService: AuthService) { }
+    constructor(
+        private authService: AuthService,
+        private stringService: StringService,
+        private jwtService: JwtService,
+    ) { }
 
     @Public() // This route is now accessible without a cookie/JWT
     @Post('login')
@@ -17,46 +21,33 @@ export class AuthController {
         @Body() loginRequestDTO: LoginRequestDTO,
         @Res({ passthrough: true }) response: Response,
     ) {
-        const { accessToken, refreshToken } = await this.authService.login(loginRequestDTO);
+        const user = await this.authService.login(loginRequestDTO);
+        const jwtToken = this.stringService.removeUndefined(new JWTTokenDTO(user));
+        const accessToken = this.jwtService.sign({ ...jwtToken }, {
+            secret: process.env.JWT_ACCESS_SECRET,
+            expiresIn: (process.env.JWT_EXPIRES_IN || '15m') as StringValue | number,
+        });
 
-        response.cookie('access_token', accessToken, {
+        response.cookie((process.env.COOKIE_NAME || 'cn'), accessToken, {
             httpOnly: true, // Prevents JavaScript from reading the cookie
             secure: process.env.NODE_ENV === 'production', // Only send over HTTPS in production
-            maxAge: ACCESS_TOKEN_EXPIRY, // 15 min
+            maxAge: +(process.env.COOKIE_LIFE_TIME_MS || '300000'), // 15 min, default 5 min
             sameSite: 'lax',
         });
 
-        response.cookie('refresh_token', refreshToken, {
-            httpOnly: true,
-            secure: process.env.NODE_ENV === 'production',
-            maxAge: ACCESS_TOKEN_EXPIRY * 2, // 10min
-            sameSite: 'lax',
-        });
-
-        return { message: 'Logged in successfully' };
-    }
-
-    @UseGuards(AuthGuard('jwt-refresh'))
-    @Post('refresh')
-    async refresh(
-        @Req() req: any,
-        @Res({ passthrough: true }) res: Response
-    ) {
-        const userId = req.user.sub;
-        return this.authService.refreshTokens(userId, res);
+        return new LoginResponseDTO(user.toObject ? user.toObject() : user);
     }
 
     @Get('me')
     getProfile(@Req() req: Request) {
-        return req.user; // Contains the payload from JwtStrategy.validate()
+        return;
     }
 
-    @Public() // This route is now accessible without a cookie/JWT
+    @Public()
     @Post('logout')
     logout(@Res({ passthrough: true }) res: Response) {
-        res.clearCookie('access_token');
-        res.clearCookie('refresh_token');
+        res.clearCookie((process.env.COOKIE_NAME || 'cn'));
 
-        return { message: 'Logged out successfully' };
+        return;
     }
 }

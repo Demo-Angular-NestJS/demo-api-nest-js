@@ -16,23 +16,20 @@ import { MongooseModule } from '@nestjs/mongoose';
         serverSelectionTimeoutMS: 5000,
         // Optional: autoIndex: false in production for faster startup
         connectionFactory: (connection) => {
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
           connection.on('connected', () => {
-            console.log('🚀 MongoDB connected successfully');
-          });
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
-          connection.on('error', (error: any) => {
-            console.error('❌ MongoDB connection failed:', error);
+            console.log('MongoDB connected successfully');
           });
 
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-return
+          connection.on('error', (error: any) => {
+            console.error('MongoDB connection failed:', error);
+          });
+
           return connection;
         },
       }),
       inject: [ConfigService],
     }),
   ],
-  // Exporting MongooseModule ensures other modules can use @InjectModel()
   exports: [MongooseModule],
 })
 export class DatabaseModule {}
