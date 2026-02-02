@@ -43,7 +43,6 @@ export class AuthController {
         return;
     }
 
-    @Public()
     @Post('logout')
     logout(@Res({ passthrough: true }) res: Response) {
         res.clearCookie((process.env.COOKIE_NAME || 'cn'));

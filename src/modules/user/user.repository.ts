@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { ConflictException, Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, FilterQuery } from 'mongoose';
 import { User } from './schemas/user.schema';
@@ -67,8 +67,18 @@ export class UserRepository implements IBaseRepository<User> {
   }
 
   async delete(filter: Record<string, any>): Promise<boolean> {
-    const result = await this.userModel.deleteOne(filter).exec();
+    const user = await this.findOne(filter);
 
-    return result.deletedCount > 0;
+    if (!user)  {
+      return false;
+    }
+
+    if (user.isAdmin) {
+      throw new ConflictException(`The user cannot be deleted, it's a system account.`);
+    }
+
+    const result = await this.update(filter, { isDeleted: true });
+
+    return !!result;
   }
 }

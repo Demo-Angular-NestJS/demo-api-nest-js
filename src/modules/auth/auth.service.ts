@@ -11,11 +11,11 @@ export class AuthService {
     private bcryptService: BCryptService,
   ) { }
 
-  async login(loginRequestDTO: LoginRequestDTO): Promise<User> {
+  public async login(loginRequestDTO: LoginRequestDTO): Promise<User> {
     const { email, password } = loginRequestDTO;
     const user = await this.validateUser(email, password);
 
-    if (user && !user?.isActive) {
+    if (user && (!user.isActive || user.isDeleted)) {
       throw new ForbiddenException('Please contact to support for more details');
     }
 
@@ -26,7 +26,7 @@ export class AuthService {
     throw new UnauthorizedException('Invalid username or password');
   }
 
-  async validateUser(email: string, pass: string): Promise<User | null> {
+  private async validateUser(email: string, pass: string): Promise<User | null> {
     const user = await this.userRepository.findOne({ email });
 
     if (user && (await this.bcryptService.comparePassword(pass, user?.password ?? ''))) {

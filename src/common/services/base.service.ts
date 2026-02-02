@@ -97,24 +97,23 @@ export abstract class BaseService<T, DTO> {
     }
 
     private handleDatabaseErrors(error: any): never {
-        console.log(error.name);
         if (error.code === 11000) {
             const field = Object.keys(error.keyPattern)[0];
             throw new ConflictException(`The ${field} is already in use.`);
         }
 
-        if (error.name === 'ValidationError') {
-            throw new BadRequestException(error.message);
+        switch (error.name) {
+            case 'ValidationError':
+                throw new BadRequestException(error.message);
+            case 'CastError':
+                throw new BadRequestException(`Invalid format for field: ${error.path}`);
+            case 'NotFoundException':
+                throw new NotFoundException('Resource not found for deletion');
+            case 'ConflictException':
+                throw new ConflictException(error.message);
+                break;
+            default:
+                throw new InternalServerErrorException('An unexpected database error occurred');
         }
-
-        if (error.name === 'CastError') {
-            throw new BadRequestException(`Invalid format for field: ${error.path}`);
-        }
-
-        if (error.name === 'NotFoundException') {
-            throw new NotFoundException('Resource not found for deletion');
-        }
-
-        throw new InternalServerErrorException('An unexpected database error occurred');
     }
 }

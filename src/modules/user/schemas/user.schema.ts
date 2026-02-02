@@ -1,13 +1,12 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { Document, Types } from 'mongoose';
+import { BaseDocumentModel } from 'common';
+import { Types } from 'mongoose';
 
 @Schema({
   collection: 'user',
   timestamps: true,
 })
-export class User extends Document {
-  declare _id: Types.ObjectId;
-
+export class User extends BaseDocumentModel {
   @Prop({ required: true, unique: true })
   userName: string;
 
@@ -23,17 +22,8 @@ export class User extends Document {
   @Prop({ default: false })
   isAdmin: boolean;
 
-  @Prop({ type: String })
-  createdBy: string;
-
-  @Prop()
-  createdAt: Date;
-
-  @Prop({ type: String })
-  updatedBy: string;
-
-  @Prop()
-  updatedAt: Date;
+  @Prop({ default: false })
+  isDeleted: boolean;
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);

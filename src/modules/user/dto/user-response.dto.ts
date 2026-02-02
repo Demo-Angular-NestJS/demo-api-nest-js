@@ -1,10 +1,7 @@
-import { Expose, Transform } from 'class-transformer';
+import { Expose } from 'class-transformer';
+import { BaseEntityModel } from 'common';
 
-export class UserResponseDTO {
-    @Expose()
-    @Transform(({ obj }) => obj._id?.toString() || obj.id?.toString())
-    id: string;
-
+export class UserResponseDTO extends BaseEntityModel {
     @Expose()
     userName: string;
 
@@ -17,19 +14,8 @@ export class UserResponseDTO {
     @Expose()
     isAdmin: boolean;
 
-    @Expose()
-    createdBy: string;
-    
-    @Expose()
-    createdAt: Date;
-    
-    @Expose() 
-    updatedBy: string;
-    
-    @Expose()
-    updatedAt: Date;
-
     constructor(partial: Partial<any>) {
+        super();
         if (partial) {
             const data = partial._doc ? partial._doc : partial;
             Object.assign(this, data);
