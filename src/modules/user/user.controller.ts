@@ -14,7 +14,7 @@ export class UserController {
   ) { }
 
   @Get()
-  async findAll(@Query() query: SearchRequestDTO) {
+  public async findAll(@Query() query: SearchRequestDTO) {
     const result = await this.userService.findAll(query);
     const userInstances = result.data.map(
       (user) => new UserResponseDTO(user instanceof Document ? user.toObject() : user)
@@ -24,12 +24,12 @@ export class UserController {
   }
 
   @Get(':id')
-  async findById(@Param('id') id: string) {
+  public async findById(@Param('id') id: string) {
     return await this.userService.findOne({ _id: new Types.ObjectId(id) });
   }
 
   @Post()
-  async create(
+  public async create(
     @Body() createUserDto: CreateUserDTO,
     @Req() req: AuthenticatedRequestModel,
   ) {
@@ -37,7 +37,7 @@ export class UserController {
   }
 
   @Patch(':id')
-  async update(
+  public async update(
     @Param('id') id: string,
     @Body() updateUserDto: UpdateUserDTO,
     @Req() req: AuthenticatedRequestModel,
@@ -47,7 +47,7 @@ export class UserController {
 
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
-  async remove(@Param('id', ParseObjectIdPipe) id: string) {
+  public async remove(@Param('id', ParseObjectIdPipe) id: string) {
     return await this.userService.delete({ _id: id });
   }
 }

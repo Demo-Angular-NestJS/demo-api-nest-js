@@ -10,7 +10,7 @@ export abstract class BaseService<T, DTO> {
         protected readonly dtoClass: new (...args: any[]) => DTO,
     ) { }
 
-    async findAll(query: any): Promise<SearchResponseDTO<DTO>> {
+    public async findAll(query: any): Promise<SearchResponseDTO<DTO>> {
         const { data, total } = await this.repository.findAll(query);
 
         const transformedData = plainToInstance(this.dtoClass, data, {
@@ -28,7 +28,7 @@ export abstract class BaseService<T, DTO> {
         return new SearchResponseDTO(transformedData, meta);
     }
 
-    async findOne(filter: Partial<T>): Promise<DTO> {
+    public async findOne(filter: Partial<T>): Promise<DTO> {
         const entity = await this.repository.findOne(filter);
 
         if (!entity) {
@@ -42,7 +42,7 @@ export abstract class BaseService<T, DTO> {
         });
     }
 
-    async create(inputDto: any, userId?: string): Promise<DTO> {
+    public async create(inputDto: any, userId?: string): Promise<DTO> {
         try {
             inputDto = {
                 ...inputDto,
@@ -60,7 +60,7 @@ export abstract class BaseService<T, DTO> {
         }
     }
 
-    async update(filter: Record<string, any>, inputDto: any, userId?: string): Promise<DTO> {
+    public async update(filter: Record<string, any>, inputDto: any, userId?: string): Promise<DTO> {
         try {
             inputDto = {
                 ...inputDto,
@@ -82,7 +82,7 @@ export abstract class BaseService<T, DTO> {
         }
     }
 
-    async delete(filter: Record<string, any>): Promise<void> {
+    public async delete(filter: Record<string, any>): Promise<void> {
         try {
             const deleted = await this.repository.delete(filter);
 
