@@ -8,7 +8,6 @@ import { AuthModule } from 'modules/auth/auth.module';
 import { UserModule } from 'modules/user/user.module';
 import { SharedModule } from 'share.module';
 import { CacheModule } from '@nestjs/cache-manager';
-import { redisStore } from 'cache-manager-redis-yet';
 
 @Module({
   imports: [

@@ -10,10 +10,9 @@ import {
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { Reflector } from '@nestjs/core'; // Added Reflector
 import * as cacheManager from 'cache-manager';
-import { Observable, of, throwError } from 'rxjs';
-import { tap, catchError } from 'rxjs/operators';
+import { from, Observable, of, throwError } from 'rxjs';
+import { tap, catchError, mergeMap } from 'rxjs/operators';
 import { createHash } from 'crypto';
-import { IDEMPOTENCY_REQUIRED_KEY } from 'common/decorators';
 
 @Injectable()
 export class IdempotencyInterceptor implements NestInterceptor {
@@ -32,28 +31,19 @@ export class IdempotencyInterceptor implements NestInterceptor {
 
         const idempotencyKey = request.headers['idempotency-key'];
 
-        // Check if the specific route requires idempotency via @RequireIdempotency()
-        const isRequired = this.reflector.getAllAndOverride<boolean>(IDEMPOTENCY_REQUIRED_KEY, [
-            context.getHandler(),
-            context.getClass(),
-        ]);
-
-        // 2. Conditional enforcement
+        // IdempotencyKey required
         if (!idempotencyKey) {
-            if (isRequired) {
-                throw new BadRequestException('Idempotency-Key header is required for this operation');
-            }
-            return next.handle(); // Not required and not provided, just proceed
+            throw new BadRequestException('Idempotency-Key header is required for this operation');
         }
 
-        // 3. Create hash of the body (Safety check)
+        // Create hash of the body (Safety check)
         const bodyHash = createHash('sha256')
             .update(JSON.stringify(request.body ?? {}))
             .digest('hex');
 
         const cacheKey = `idempotency:${idempotencyKey}:${bodyHash}`;
 
-        // 4. Cache Lookup
+        //Cache Lookup
         const cachedRecord = await this.cacheManager.get(cacheKey);
 
         if (cachedRecord) {
@@ -63,16 +53,20 @@ export class IdempotencyInterceptor implements NestInterceptor {
             return of(cachedRecord);
         }
 
-        // 5. Set Lock
+        //Set Lock
         await this.cacheManager.set(cacheKey, 'PROCESSING', 30000);
 
         return next.handle().pipe(
             tap(async (response) => {
+                // Only cache actual successful responses
                 await this.cacheManager.set(cacheKey, response, 86400000);
             }),
-            catchError(async (err) => {
-                await this.cacheManager.del(cacheKey);
-                return throwError(() => err);
+            catchError((err) => {
+                // We use 'from' to handle the async cache deletion
+                // then mergeMap to ensure the original error is thrown
+                return from(this.cacheManager.del(cacheKey)).pipe(
+                    mergeMap(() => throwError(() => err))
+                );
             }),
         );
     }

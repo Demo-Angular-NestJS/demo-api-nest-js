@@ -1,8 +1,9 @@
 import { NestFactory, Reflector } from '@nestjs/core';
-import { AppModule } from './app.module';
 import { ClassSerializerInterceptor, ValidationPipe, VersioningType } from '@nestjs/common';
 import cookieParser from 'cookie-parser';
 import { ConfigService } from '@nestjs/config';
+import { AppModule } from './app.module';
+import { CSRFExceptionFilter, doubleCsrfProtection } from 'common';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -13,8 +14,7 @@ async function bootstrap() {
     type: VersioningType.URI,
     defaultVersion: '1', // Automatically adds /v1/ to all routes
   });
-  app.use(cookieParser()); // Essential for reading cookies
-
+  
   //#region CORS Config
   const origin = configService.get<string>('URL_ALLOWED_ACCESS');
 
@@ -22,8 +22,14 @@ async function bootstrap() {
     origin: origin?.includes(',') ? origin.split(',') : origin || 'http://localhost:4200',
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'Accept', 'Idempotency-Key'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'Accept', 'Idempotency-Key', 'x-csrf-token'],
   });
+  //#endregion
+
+  //#region COOKIES AND CSRF Config
+  app.use(cookieParser(process.env.COOKIE_PARSER_SECRET)); // Essential for reading cookies
+  app.use(doubleCsrfProtection);
+  app.useGlobalFilters(new CSRFExceptionFilter());
   //#endregion
 
   app.useGlobalInterceptors(

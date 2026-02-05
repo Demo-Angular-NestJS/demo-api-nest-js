@@ -6,6 +6,7 @@ import { AuthService } from './auth.service';
 import { JWTTokenDTO, Public, StringService } from 'common';
 import { LoginRequestDTO } from './dto/login-request.dto';
 import { LoginResponseDTO } from './dto/login-response.dto';
+import { generateCsrfToken } from 'common/middleware';
 
 @Controller('auth')
 export class AuthController {
@@ -44,10 +45,16 @@ export class AuthController {
     }
 
     @Public()
+    @Get('token')
+    getCsrfToken(@Req() req: Request, @Res() res: Response) {
+        const token = generateCsrfToken(req, res);
+        return res.json({ token });
+    }
+
+    @Public()
     @Post('logout')
     logout(@Res({ passthrough: true }) res: Response) {
         res.clearCookie((process.env.COOKIE_NAME || 'cn'));
-
         return;
     }
 }
