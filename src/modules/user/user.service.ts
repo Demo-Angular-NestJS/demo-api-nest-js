@@ -1,9 +1,11 @@
 
-import { Injectable } from '@nestjs/common';
-import { BaseService, StringService } from 'common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { User } from './schemas/user.schema';
 import { UserResponseDTO } from './dto/user-response.dto';
 import { UserRepository } from './user.repository';
+import { CheckExistenceResponseDTO } from './dto/check-exist-response.dto.model';
+import { BaseService } from 'common/services/base.service';
+import { StringService } from 'common/services/string.service';
 
 @Injectable()
 export class UserService extends BaseService<User, UserResponseDTO> {
@@ -12,5 +14,16 @@ export class UserService extends BaseService<User, UserResponseDTO> {
     protected readonly stringService: StringService,
   ) {
     super(userRepository, UserResponseDTO);
+  }
+
+  public async checkUserExists(userName?: string, email?: string): Promise<CheckExistenceResponseDTO> {
+    if (!email && !userName) {
+      throw new BadRequestException();
+    };
+
+    const userWithUserName = await this.userRepository.findOne({ userName: new RegExp(`^${userName}$`, 'i') });
+    const userWithEmail = await this.userRepository.findOne({ email });
+
+    return { userNameExist: !!userWithUserName, emailExist: !!userWithEmail };
   }
 }

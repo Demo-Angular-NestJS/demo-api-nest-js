@@ -36,7 +36,7 @@ export class UserRepository implements IBaseRepository<User> {
     return { data, total };
   }
 
-  async findOne(filter: Partial<User>): Promise<User | null> {
+  async findOne(filter: Partial<User | any>): Promise<User | null> {
     return await this.userModel.findOne(filter as any).lean<User>().exec();
   }
 

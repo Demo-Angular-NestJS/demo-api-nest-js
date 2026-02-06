@@ -46,7 +46,7 @@ export abstract class BaseService<T, DTO> {
         try {
             inputDto = {
                 ...inputDto,
-                createdBy: userId,
+                createdBy: userId || null,
             };
 
             const entity = await this.repository.create(inputDto);

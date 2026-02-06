@@ -1,11 +1,12 @@
 import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, Patch, Post, Query, Req } from '@nestjs/common';
 import { Document, Types } from 'mongoose';
 import { UserService } from './user.service';
-import { ParseObjectIdPipe, SearchRequestDTO, SearchResponseDTO } from 'common';
+import { ParseObjectIdPipe, Public, SearchRequestDTO, SearchResponseDTO } from 'common';
 import type { AuthenticatedRequestModel } from 'common/models';
 import { UserResponseDTO } from './dto/user-response.dto';
 import { CreateUserDTO } from './dto/create-user.dto';
 import { UpdateUserDTO } from './dto/update-user.dto';
+import { CheckExistenceResponseDTO } from './dto/check-exist-response.dto.model';
 
 @Controller('user')
 export class UserController {
@@ -23,6 +24,16 @@ export class UserController {
     return new SearchResponseDTO(userInstances, result.meta);
   }
 
+  @Public()
+  @Get('exists')
+  public async checkExistence(
+    @Query('userName') userName?: string,
+    @Query('email') email?: string,
+  ) {
+    const resp = await this.userService.checkUserExists(userName, email);
+    return new CheckExistenceResponseDTO(resp);
+  }
+
   @Get(':id')
   public async findById(@Param('id') id: string) {
     return await this.userService.findOne({ _id: new Types.ObjectId(id) });
@@ -34,6 +45,15 @@ export class UserController {
     @Req() req: AuthenticatedRequestModel,
   ) {
     return await this.userService.create(createUserDto, req?.user?.sub);
+  }
+
+  @Public()
+  @Post('register')
+  public async register(
+    @Body() createUserDto: CreateUserDTO,
+  ) {
+    const created = await this.userService.create(createUserDto);
+    return new UserResponseDTO(created);
   }
 
   @Patch(':id')
