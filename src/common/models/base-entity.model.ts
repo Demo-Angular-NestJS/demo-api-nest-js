@@ -16,4 +16,11 @@ export class BaseEntityModel {
 
   @Expose()
   updatedAt: Date;
+
+  protected initialize(partial: Partial<any>): void {
+    if (partial) {
+      const data = partial._doc ? partial._doc : partial;
+      Object.assign(this, data);
+    }
+  }
 }

@@ -1,84 +1,50 @@
 import { ConflictException, Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model, FilterQuery } from 'mongoose';
+import { Model, FilterQuery, HydratedDocument } from 'mongoose';
 import { User } from './schemas/user.schema';
 import { BCryptService, IBaseRepository, SearchRequestDTO } from 'common';
+import { BaseRepository } from 'modules/base.repository';
 
 @Injectable()
-export class UserRepository implements IBaseRepository<User> {
+export class UserRepository extends BaseRepository<User> implements IBaseRepository<User> {
   constructor(
-    @InjectModel(User.name) private userModel: Model<User>,
+    @InjectModel(User.name) userModel: Model<User>,
     private bcryptService: BCryptService,
-  ) { }
-
-  async findAll(query: SearchRequestDTO): Promise<{ data: User[], total: number }> {
-    const { filterField, filterValue, page, limit, sortBy, sortOrder } = query;
-    const skip = (page - 1) * limit;
-    const sortOptions = { [sortBy]: sortOrder === 'asc' ? 1 : -1 };
-    const filter: FilterQuery<User> = {};
-
-    // Dynamically build the filter if both field and value are provided
-    if (filterField && filterValue) {
-      filter[filterField] = { $regex: filterValue, $options: 'i' };
-    }
-
-    const [data, total] = await Promise.all([
-      this.userModel
-        .find(filter)
-        .select('-password -__v') // Explicitly exclude sensitive fields at the DB level
-        .sort(sortOptions as any)
-        .skip(skip)
-        .limit(limit)
-        .exec(),
-      this.userModel.countDocuments().exec(),
-    ]);
-
-    return { data, total };
+  ) {
+    super(userModel);
   }
 
-  async findOne(filter: Partial<User | any>): Promise<User | null> {
-    return await this.userModel.findOne(filter as any).lean<User>().exec();
+  async findAll(query: SearchRequestDTO) {
+    return super.findAll(query, '-password -__v');
   }
 
-  async create(data: Partial<User>): Promise<User> {
-    if (data?.password) {
+  async create(data: Partial<User>): Promise<HydratedDocument<User>> {
+    if (data.password) {
       data.password = await this.bcryptService.hashPassword(data.password);
     }
 
-    const newUser = new this.userModel(data);
-    const savedUser = await newUser.save();
-
-    return savedUser.toObject();
+    return super.create(data);
   }
 
   async update(filter: Record<string, any>, data: Partial<User>): Promise<User | null> {
-    if (data?.password) {
+    if (data.password) {
       data.password = await this.bcryptService.hashPassword(data.password);
     }
-
-    return await this.userModel
-      .findOneAndUpdate(filter, { $set: data }, {
-        new: true,
-        runValidators: true,
-        timestamps: true,
-      })
-      .lean<User>()
-      .exec();
+    return super.update(filter, data);
   }
 
-  async delete(filter: Record<string, any>): Promise<boolean> {
+ async delete(filter: Record<string, any>): Promise<boolean> {
     const user = await this.findOne(filter);
 
-    if (!user)  {
-      return false;
-    }
-
+    if (!user) {
+      return false
+    };
+    
     if (user.isAdmin) {
       throw new ConflictException(`The user cannot be deleted, it's a system account.`);
     }
 
-    const result = await this.update(filter, { isDeleted: true });
-
+    const result = await this.deleteSoft(filter);
     return !!result;
   }
 }

@@ -1,27 +1,21 @@
-import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, Patch, Post, Query, Req } from '@nestjs/common';
-import { Document, Types } from 'mongoose';
+import { Body, Controller, Get, NotFoundException, Post, Query, Req } from '@nestjs/common';
+import { Types } from 'mongoose';
 import { UserService } from './user.service';
-import { ParseObjectIdPipe, Public, SearchRequestDTO, SearchResponseDTO } from 'common';
+import { Public} from 'common';
 import type { AuthenticatedRequestModel } from 'common/models';
 import { UserResponseDTO } from './dto/user-response.dto';
 import { CreateUserDTO } from './dto/create-user.dto';
 import { UpdateUserDTO } from './dto/update-user.dto';
 import { CheckExistenceResponseDTO } from './dto/check-exist-response.dto.model';
+import { BaseController } from 'modules/base.controller';
+import { User } from './schemas/user.schema';
 
 @Controller('user')
-export class UserController {
+export class UserController extends BaseController<User, CreateUserDTO, UpdateUserDTO, UserResponseDTO> {
   constructor(
     private readonly userService: UserService,
-  ) { }
-
-  @Get()
-  public async findAll(@Query() query: SearchRequestDTO) {
-    const result = await this.userService.findAll(query);
-    const userInstances = result.data.map(
-      (user) => new UserResponseDTO(user instanceof Document ? user.toObject() : user)
-    );
-
-    return new SearchResponseDTO(userInstances, result.meta);
+  ) {
+    super(userService, UserResponseDTO);
   }
 
   @Public()
@@ -34,17 +28,15 @@ export class UserController {
     return new CheckExistenceResponseDTO(resp);
   }
 
-  @Get(':id')
-  public async findById(@Param('id') id: string) {
-    return await this.userService.findOne({ _id: new Types.ObjectId(id) });
-  }
+  @Get('current')
+  public async current(@Req() req: AuthenticatedRequestModel) {
+    const current = await this.userService.findOne({ _id: new Types.ObjectId(req?.user?.sub) });
 
-  @Post()
-  public async create(
-    @Body() createUserDto: CreateUserDTO,
-    @Req() req: AuthenticatedRequestModel,
-  ) {
-    return await this.userService.create(createUserDto, req?.user?.sub);
+    if (!current) {
+      throw new NotFoundException('User not found');
+    }
+
+    return new UserResponseDTO(current);
   }
 
   @Public()
@@ -54,20 +46,5 @@ export class UserController {
   ) {
     const created = await this.userService.create(createUserDto);
     return new UserResponseDTO(created);
-  }
-
-  @Patch(':id')
-  public async update(
-    @Param('id') id: string,
-    @Body() updateUserDto: UpdateUserDTO,
-    @Req() req: AuthenticatedRequestModel,
-  ) {
-    return await this.userService.update({ _id: id }, updateUserDto, req?.user?.sub);
-  }
-
-  @Delete(':id')
-  @HttpCode(HttpStatus.NO_CONTENT)
-  public async remove(@Param('id', ParseObjectIdPipe) id: string) {
-    return await this.userService.delete({ _id: id });
   }
 }

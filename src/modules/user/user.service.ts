@@ -6,14 +6,28 @@ import { UserRepository } from './user.repository';
 import { CheckExistenceResponseDTO } from './dto/check-exist-response.dto.model';
 import { BaseService } from 'common/services/base.service';
 import { StringService } from 'common/services/string.service';
+import { UserConfigurationRepository } from 'modules/user-configuration/user-configuration.repository';
 
 @Injectable()
 export class UserService extends BaseService<User, UserResponseDTO> {
   constructor(
     protected readonly userRepository: UserRepository,
+    private readonly userConfigurationRepository: UserConfigurationRepository,
     protected readonly stringService: StringService,
   ) {
     super(userRepository, UserResponseDTO);
+  }
+
+  public async create(inputDto: any, userId?: string): Promise<UserResponseDTO> {
+    const user = await super.create(inputDto, userId);
+    const targetUserId = user.id || (user as any)._id;
+    const existingConfig = await this.userConfigurationRepository.findOne({ userId: targetUserId });
+
+    if (!existingConfig) {
+      await this.userConfigurationRepository.create({ userId: targetUserId.toString() });
+    }
+    
+    return user;
   }
 
   public async checkUserExists(userName?: string, email?: string): Promise<CheckExistenceResponseDTO> {

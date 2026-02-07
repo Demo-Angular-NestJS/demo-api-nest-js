@@ -16,9 +16,6 @@ export class UserResponseDTO extends BaseEntityModel {
 
     constructor(partial: Partial<any>) {
         super();
-        if (partial) {
-            const data = partial._doc ? partial._doc : partial;
-            Object.assign(this, data);
-        }
+        this.initialize(partial);
     }
 }

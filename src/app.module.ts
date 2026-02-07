@@ -8,6 +8,7 @@ import { AuthModule } from 'modules/auth/auth.module';
 import { UserModule } from 'modules/user/user.module';
 import { SharedModule } from 'share.module';
 import { CacheModule } from '@nestjs/cache-manager';
+import { UserConfigurationModule } from 'modules/user-configuration/user-configuration.module';
 
 @Module({
   imports: [
@@ -28,6 +29,7 @@ import { CacheModule } from '@nestjs/cache-manager';
     SharedModule,
     AuthModule,
     UserModule,
+    UserConfigurationModule,
   ],
   controllers: [],
   providers: [
