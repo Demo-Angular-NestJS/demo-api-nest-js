@@ -9,6 +9,9 @@ export class UserResponseDTO extends BaseEntityModel {
     email: string;
 
     @Expose()
+    phoneNumber: string;
+
+    @Expose()
     isActive: boolean;
 
     @Expose()

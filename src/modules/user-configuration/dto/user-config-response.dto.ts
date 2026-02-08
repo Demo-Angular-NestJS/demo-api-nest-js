@@ -15,6 +15,9 @@ export class UserConfigResponseDTO extends BaseEntityModel {
     @Expose()
     systemTimeZone: string;
 
+    @Expose()
+    isProfilePublic: boolean;
+
     constructor(partial: Partial<any>) {
         super();
         this.initialize(partial);

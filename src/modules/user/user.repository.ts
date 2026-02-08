@@ -1,9 +1,10 @@
-import { ConflictException, Injectable } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, FilterQuery, HydratedDocument } from 'mongoose';
 import { User } from './schemas/user.schema';
 import { BCryptService, IBaseRepository, SearchRequestDTO } from 'common';
 import { BaseRepository } from 'modules/base.repository';
+import { ChangePasswordDTO } from './dto/change-password.dto';
 
 @Injectable()
 export class UserRepository extends BaseRepository<User> implements IBaseRepository<User> {
@@ -33,18 +34,44 @@ export class UserRepository extends BaseRepository<User> implements IBaseReposit
     return super.update(filter, data);
   }
 
- async delete(filter: Record<string, any>): Promise<boolean> {
+  async delete(filter: Record<string, any>): Promise<boolean> {
     const user = await this.findOne(filter);
 
     if (!user) {
       return false
     };
-    
+
     if (user.isAdmin) {
       throw new ConflictException(`The user cannot be deleted, it's a system account.`);
     }
 
     const result = await this.deleteSoft(filter);
     return !!result;
+  }
+
+  public async updatePassword(userId: string, changePasswordDTO: ChangePasswordDTO): Promise<boolean> {
+    const user = await this.findById(userId, '+password');
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    const isMatch = await this.bcryptService.comparePassword(
+      changePasswordDTO.currentPassword,
+      user?.password ?? ''
+    );
+
+    if (!isMatch) {
+      throw new BadRequestException('Please verify your current password');
+    }
+
+    const hashedPassword = await this.bcryptService.hashPassword(changePasswordDTO.newPassword);
+
+    await this.model.updateOne(
+      { _id: userId },
+      { $set: { password: hashedPassword } }
+    );
+
+    return true;
   }
 }

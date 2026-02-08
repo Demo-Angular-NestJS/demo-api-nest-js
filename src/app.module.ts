@@ -18,7 +18,6 @@ import { UserConfigurationModule } from 'modules/user-configuration/user-configu
     }),
     // 2. Async Mongoose Setup
     DatabaseModule,
-
     CacheModule.register({
       isGlobal: true,
       // No 'store' specified means it defaults to in-memory (lru-cache)

@@ -19,6 +19,10 @@ export class CreateUserDTO {
   @IsEmail({}, { message: 'Please provide a valid email address' })
   email: string;
 
+  @IsOptional()
+  @IsString()
+  phoneNumber: string;
+
   @IsString()
   @MinLength(4, { message: 'Password must be at least 4 characters long' })
   password: string;

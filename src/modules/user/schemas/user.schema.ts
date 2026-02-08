@@ -13,6 +13,9 @@ export class User extends BaseDocumentModel {
   @Prop({ required: true, unique: true })
   email: string;
 
+  @Prop()
+  phoneNumber: string;
+
   @Prop({ required: true })
   password?: string;
 

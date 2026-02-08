@@ -1,4 +1,4 @@
-import { Body, Controller, Get, NotFoundException, Post, Query, Req } from '@nestjs/common';
+import { Body, Controller, Get, NotFoundException, Patch, Post, Query, Req } from '@nestjs/common';
 import { Types } from 'mongoose';
 import { UserService } from './user.service';
 import { Public} from 'common';
@@ -9,6 +9,7 @@ import { UpdateUserDTO } from './dto/update-user.dto';
 import { CheckExistenceResponseDTO } from './dto/check-exist-response.dto.model';
 import { BaseController } from 'modules/base.controller';
 import { User } from './schemas/user.schema';
+import { ChangePasswordDTO } from './dto/change-password.dto';
 
 @Controller('user')
 export class UserController extends BaseController<User, CreateUserDTO, UpdateUserDTO, UserResponseDTO> {
@@ -46,5 +47,15 @@ export class UserController extends BaseController<User, CreateUserDTO, UpdateUs
   ) {
     const created = await this.userService.create(createUserDto);
     return new UserResponseDTO(created);
+  }
+
+  @Post('change-password')
+  public async changePassword(
+    @Req() req: AuthenticatedRequestModel,
+    @Body() changePasswordDto: ChangePasswordDTO,
+  ) {
+    const userId = req.user.sub;
+    const result = await this.userService.changePassword(userId, changePasswordDto);
+    return  { message: result ? 'Password updated successfully' : 'An error ocurred changing the password'};
   }
 }

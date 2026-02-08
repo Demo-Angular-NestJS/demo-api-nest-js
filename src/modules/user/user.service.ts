@@ -1,5 +1,5 @@
 
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { User } from './schemas/user.schema';
 import { UserResponseDTO } from './dto/user-response.dto';
 import { UserRepository } from './user.repository';
@@ -7,13 +7,16 @@ import { CheckExistenceResponseDTO } from './dto/check-exist-response.dto.model'
 import { BaseService } from 'common/services/base.service';
 import { StringService } from 'common/services/string.service';
 import { UserConfigurationRepository } from 'modules/user-configuration/user-configuration.repository';
+import { ChangePasswordDTO } from './dto/change-password.dto';
+import { BCryptService } from 'common';
 
 @Injectable()
 export class UserService extends BaseService<User, UserResponseDTO> {
   constructor(
     protected readonly userRepository: UserRepository,
     private readonly userConfigurationRepository: UserConfigurationRepository,
-    protected readonly stringService: StringService,
+    private readonly bcryptService: BCryptService,
+    private readonly stringService: StringService,
   ) {
     super(userRepository, UserResponseDTO);
   }
@@ -39,5 +42,9 @@ export class UserService extends BaseService<User, UserResponseDTO> {
     const userWithEmail = await this.userRepository.findOne({ email });
 
     return { userNameExist: !!userWithUserName, emailExist: !!userWithEmail };
+  }
+
+  public async changePassword(userId: string, changePasswordDTO: ChangePasswordDTO): Promise<boolean> {
+    return this.userRepository.updatePassword(userId, changePasswordDTO);
   }
 }

@@ -23,6 +23,9 @@ export class UserConfiguration extends BaseDocumentModel {
 
   @Prop({ default: 'UTC' })
   systemTimeZone: string;
+
+  @Prop({ default: true })
+  isProfilePublic: boolean;
 }
 
 export const UserConfigurationSchema = SchemaFactory.createForClass(UserConfiguration);

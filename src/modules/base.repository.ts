@@ -29,8 +29,12 @@ export abstract class BaseRepository<T> {
         return { data: data as T[], total };
     }
 
-    public async findOne(filter: FilterQuery<T>): Promise<T | null> {
-        return await this.model.findOne(filter).lean<T>().exec();
+    public async findOne(filter: FilterQuery<T>, sensitiveFields: string = '-__v'): Promise<T | null> {
+        return await this.model.findOne(filter).select(sensitiveFields).lean<T>().exec();
+    }
+
+    public async findById(id: string, sensitiveFields: string = ''): Promise<T | null> {
+        return await this.model.findById(id).select(sensitiveFields).lean<T>().exec();
     }
 
     public async create(data: Partial<T>): Promise<HydratedDocument<T>> {

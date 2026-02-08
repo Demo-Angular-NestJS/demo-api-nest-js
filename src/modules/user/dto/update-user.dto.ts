@@ -5,6 +5,6 @@ import { IsOptional, IsString, MinLength } from 'class-validator';
 export class UpdateUserDTO extends PartialType(CreateUserDTO) {
   @IsOptional()
   @IsString()
-  @MinLength(6)
+  @MinLength(4, { message: 'Password must be at least 4 characters long' })
   password?: string;
 }

@@ -29,4 +29,11 @@ export class CreateUserConfigurationDTO {
   @IsString()
   @IsOptional()
   systemTimeZone?: string;
+
+
+  @Expose()
+  @IsBoolean()
+  @IsOptional()
+  @Transform(({ value }) => value === 'true' || value === true)
+  isProfilePublic: boolean;
 }
