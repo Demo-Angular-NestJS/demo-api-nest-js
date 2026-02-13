@@ -1,7 +1,8 @@
-import { Body, Delete, Get, HttpCode, HttpStatus, NotFoundException, Param, Patch, Post, Query, Req } from '@nestjs/common';
+import { Body, Delete, Get, HttpCode, HttpStatus, InternalServerErrorException, Param, Patch, Post, Query, Req, Res } from '@nestjs/common';
 import { Types, Document } from 'mongoose';
-import { BaseService, SearchRequestDTO, SearchResponseDTO } from 'common';
+import { BaseService, SearchRequestDTO } from 'common';
 import type { AuthenticatedRequestModel } from 'common/models';
+import type { Response } from 'express';
 
 export abstract class BaseController<T, CreateDTO, UpdateDTO, ResponseDTO> {
     constructor(
@@ -9,17 +10,32 @@ export abstract class BaseController<T, CreateDTO, UpdateDTO, ResponseDTO> {
         private readonly responseDto: new (data: any) => ResponseDTO,
     ) { }
 
+    @Post('Search')
+    public async search(
+        @Body() payload: SearchRequestDTO,
+        @Res({ passthrough: true }) res: Response
+    ) {
+        const { data, total } = await this.service.search(payload);
+
+        res.append('X-Total-Count', total.toString());
+
+        return data;
+    }
+
     @Get()
-    public async findAll(@Query() query: SearchRequestDTO) {
-        const result = await this.service.findAll(query);
-        const instances = result.data.map((item: any) => this.transform(item));
-        return new SearchResponseDTO(instances, result.meta);
+    public async getWithQuery(@Query() query: SearchRequestDTO) {
+        const { data } = await this.service.search(query);
+        return data;
     }
 
     @Get(':id')
-    public async findById(@Param('id') id: string) {
-        const result = await this.service.findOne({ _id: new Types.ObjectId(id) } as any);
-        return this.transform(result);
+    public async getById(@Param('id') id: string) {
+        try {
+            const result = await this.service.getByFilter({ _id: new Types.ObjectId(id) } as any);
+            return this.transform(result);
+        } catch (ex) { 
+            throw new InternalServerErrorException(ex.message);
+        }
     }
 
     @Post()
@@ -43,8 +59,8 @@ export abstract class BaseController<T, CreateDTO, UpdateDTO, ResponseDTO> {
 
     @Delete(':id')
     @HttpCode(HttpStatus.NO_CONTENT)
-    public async remove(@Param('id') id: string) {
-        return await this.service.delete({ _id: id });
+    public async deleteSoft(@Param('id') id: string) {
+        return await this.service.deleteSoft({ _id: id });
     }
 
     private transform(data: any): ResponseDTO {

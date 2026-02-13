@@ -4,11 +4,9 @@ import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { JwtService } from '@nestjs/jwt';
 import { IdempotencyInterceptor, JwtAuthGuard, RefreshSessionInterceptor } from 'common';
 import { DatabaseModule } from 'database';
-import { AuthModule } from 'modules/auth/auth.module';
-import { UserModule } from 'modules/user/user.module';
 import { SharedModule } from 'share.module';
 import { CacheModule } from '@nestjs/cache-manager';
-import { UserConfigurationModule } from 'modules/user-configuration/user-configuration.module';
+import { ModulesModule } from 'modules/modules.module';
 
 @Module({
   imports: [
@@ -24,11 +22,8 @@ import { UserConfigurationModule } from 'modules/user-configuration/user-configu
       ttl: 86400000, // 24 hours in milliseconds
       max: 1000,     // Maximum number of items in cache (prevent memory leaks)
     }),
-
     SharedModule,
-    AuthModule,
-    UserModule,
-    UserConfigurationModule,
+    ModulesModule,
   ],
   controllers: [],
   providers: [

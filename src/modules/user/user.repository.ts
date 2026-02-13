@@ -1,13 +1,13 @@
-import { BadRequestException, ConflictException, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable, NotFoundException, } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model, FilterQuery, HydratedDocument } from 'mongoose';
+import { Model, HydratedDocument } from 'mongoose';
 import { User } from './schemas/user.schema';
-import { BCryptService, IBaseRepository, SearchRequestDTO } from 'common';
+import { BCryptService, SearchRequestDTO } from 'common';
 import { BaseRepository } from 'modules/base.repository';
 import { ChangePasswordDTO } from './dto/change-password.dto';
 
 @Injectable()
-export class UserRepository extends BaseRepository<User> implements IBaseRepository<User> {
+export class UserRepository extends BaseRepository<User> {
   constructor(
     @InjectModel(User.name) userModel: Model<User>,
     private bcryptService: BCryptService,

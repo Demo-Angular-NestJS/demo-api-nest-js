@@ -17,7 +17,7 @@ export class UserConfigurationController extends BaseController<UserConfiguratio
 
   @Get('current')
   public async current(@Req() req: AuthenticatedRequestModel) {
-    const current = await this.userConfigurationService.findOne({ userId: req?.user?.sub });
+    const current = await this.userConfigurationService.getByFilter({ userId: req?.user?.sub });
 
     if (!current) {
       throw new NotFoundException('Configuration not found');

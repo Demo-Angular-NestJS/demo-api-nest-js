@@ -1,5 +1,5 @@
 
-import { BadRequestException, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { User } from './schemas/user.schema';
 import { UserResponseDTO } from './dto/user-response.dto';
 import { UserRepository } from './user.repository';

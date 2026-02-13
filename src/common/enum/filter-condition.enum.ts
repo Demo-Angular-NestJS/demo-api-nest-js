@@ -1,0 +1,9 @@
+export enum FilterConditionEnum {
+  LIKE = 'LIKE',
+  EQUAL = 'EQUAL',
+  GREATER_THAN = 'GREATER_THAN',
+  LESS_THAN = 'LESS_THAN',
+  GREATER_EQUAL = 'GREATER_EQUAL',
+  LESS_EQUAL = 'LESS_EQUAL',
+  NOT_EQUAL = 'NOT_EQUAL',
+}

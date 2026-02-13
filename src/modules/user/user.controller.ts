@@ -1,4 +1,4 @@
-import { Body, Controller, Get, NotFoundException, Patch, Post, Query, Req } from '@nestjs/common';
+import { Body, Controller, Get, NotFoundException, Post, Query, Req } from '@nestjs/common';
 import { Types } from 'mongoose';
 import { UserService } from './user.service';
 import { Public} from 'common';
@@ -31,7 +31,7 @@ export class UserController extends BaseController<User, CreateUserDTO, UpdateUs
 
   @Get('current')
   public async current(@Req() req: AuthenticatedRequestModel) {
-    const current = await this.userService.findOne({ _id: new Types.ObjectId(req?.user?.sub) });
+    const current = await this.userService.getByFilter({ _id: new Types.ObjectId(req?.user?.sub) });
 
     if (!current) {
       throw new NotFoundException('User not found');

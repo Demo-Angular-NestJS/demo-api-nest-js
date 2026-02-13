@@ -1,30 +1,29 @@
-import { IsOptional, IsInt, Min, IsString } from 'class-validator';
+import { IsOptional, IsInt, Min, IsString, IsArray, ValidateNested } from 'class-validator';
 import { Type } from 'class-transformer';
+import { FilterCriteriaDTO } from './filter-criteria.dto';
 
 export class SearchRequestDTO {
   @IsOptional()
-  @IsString()
-  filterField?: string;
-
-  @IsOptional()
-  @IsString()
-  filterValue?: string;
-
-  @IsOptional()
-  @Type(() => Number)
-  @IsInt()
-  @Min(1)
-  page: number = 1;
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => FilterCriteriaDTO)
+  searchCriteria?: FilterCriteriaDTO[];
 
   @IsOptional()
   @Type(() => Number)
   @IsInt()
   @Min(1)
-  limit: number = 10;
+  page: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  itemsPerPage: number;
 
   @IsOptional()
   @IsString()
-  sortBy: string = 'created_at';
+  sortBy: string = 'createdAt';
 
   @IsOptional()
   @IsString()

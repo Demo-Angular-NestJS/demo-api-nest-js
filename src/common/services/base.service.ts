@@ -1,34 +1,25 @@
 import { BadRequestException, ConflictException, Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
 import { plainToInstance } from 'class-transformer';
-import type { IBaseRepository } from 'common/interface';
-import { PaginationMetaDTO, SearchResponseDTO } from 'common/models';
+import type { IBaseRepository, IBaseService } from 'common/interface';
 
 @Injectable()
-export abstract class BaseService<T, DTO> {
+export abstract class BaseService<T, DTO> implements IBaseService<DTO> {
     constructor(
         protected readonly repository: IBaseRepository<T>,
         protected readonly dtoClass: new (...args: any[]) => DTO,
     ) { }
 
-    public async findAll(query: any): Promise<SearchResponseDTO<DTO>> {
+    public async search(query: any): Promise<{ data: DTO[], total: number }> {
         const { data, total } = await this.repository.findAll(query);
 
         const transformedData = plainToInstance(this.dtoClass, data, {
             excludeExtraneousValues: true,
         });
 
-        const meta: PaginationMetaDTO = {
-            totalItems: total,
-            itemCount: data.length,
-            itemsPerPage: query.limit,
-            totalPages: Math.ceil(total / (query.limit || 10)),
-            currentPage: query.page,
-        };
-
-        return new SearchResponseDTO(transformedData, meta);
+        return { data: transformedData, total };
     }
 
-    public async findOne(filter: Partial<T>): Promise<DTO> {
+    public async getByFilter(filter: Partial<T>): Promise<DTO> {
         const entity = await this.repository.findOne(filter);
 
         if (!entity) {
@@ -82,7 +73,23 @@ export abstract class BaseService<T, DTO> {
         }
     }
 
-    public async delete(filter: Record<string, any>): Promise<void> {
+    public async deleteSoft(filter: Record<string, any>): Promise<boolean> {
+        try {
+            const deleted = await this.repository.deleteSoft(filter);
+
+            if (!deleted) {
+                throw new NotFoundException(
+                    `Resource not found for deletion with criteria ${JSON.stringify(filter)}`
+                );
+            }
+
+            return true;
+        } catch (error) {
+            this.handleDatabaseErrors(error);
+        }
+    }
+
+    public async delete(filter: Record<string, any>): Promise<boolean> {
         try {
             const deleted = await this.repository.delete(filter);
 
@@ -91,6 +98,8 @@ export abstract class BaseService<T, DTO> {
                     `Resource not found for deletion with criteria ${JSON.stringify(filter)}`
                 );
             }
+
+            return true;
         } catch (error) {
             this.handleDatabaseErrors(error);
         }

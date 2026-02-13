@@ -1,32 +1,49 @@
 import { Model, FilterQuery, UpdateQuery, HydratedDocument } from 'mongoose';
-import { SearchRequestDTO } from 'common';
+import { buildDefaultFilter, IBaseRepository, mapFilterCriteria, SearchRequestDTO } from 'common';
+import { switchMap } from 'rxjs';
+import { InternalServerErrorException } from '@nestjs/common';
 
-export abstract class BaseRepository<T> {
+export abstract class BaseRepository<T> implements IBaseRepository<T> {
     constructor(protected readonly model: Model<T>) { }
 
-    public async findAll(query: SearchRequestDTO, sensitiveFields: string = '-__v'): Promise<{ data: T[], total: number }> {
-        const { filterField, filterValue, page, limit, sortBy, sortOrder } = query;
-        const skip = (page - 1) * limit;
-        const sortOptions = { [sortBy]: sortOrder === 'asc' ? 1 : -1 };
-        const filter: Record<string, any> = { isDeleted: { $ne: true } }; //deleted records don't show up in search results by default:
+    public async findAll(
+        query: SearchRequestDTO,
+        sensitiveFields: string = '-__v',
+        populateFields: string[] = [],
+    ): Promise<{ data: T[], total: number }> {
+        try {
+            const { searchCriteria, page, itemsPerPage, sortBy, sortOrder } = query;
+            const skip = (page - 1) * itemsPerPage;
+            let sortOptions = { [sortBy]: sortOrder === 'asc' ? 1 : -1 };
+            let filter: Record<string, any> = buildDefaultFilter(this.model);
 
-        if (filterField && filterValue) {
-            filter[filterField] = { $regex: filterValue, $options: 'i' };
+            if (searchCriteria && searchCriteria.length) {
+                const dynamicFilters = mapFilterCriteria(this.model, searchCriteria);
+                filter = { ...filter, ...dynamicFilters };
+            }
+
+            if (!this.model.schema.paths[sortBy]) {
+                sortOptions = {};
+            }
+
+            
+            const [data, total] = await Promise.all([
+                this.model
+                    .find(filter)
+                    .select(sensitiveFields)
+                    .sort(sortOptions as any)
+                    .skip(skip)
+                    .limit(itemsPerPage)
+                    .populate(populateFields)
+                    .lean<T[]>()
+                    .exec(),
+                this.model.countDocuments(filter).exec(),
+            ]);
+
+            return { data: data as T[], total };
+        } catch (ex) {
+            throw new InternalServerErrorException(ex?.message ?? 'error');
         }
-
-        const [data, total] = await Promise.all([
-            this.model
-                .find(filter)
-                .select(sensitiveFields)
-                .sort(sortOptions as any)
-                .skip(skip)
-                .limit(limit)
-                .lean<T[]>()
-                .exec(),
-            this.model.countDocuments(filter).exec(),
-        ]);
-
-        return { data: data as T[], total };
     }
 
     public async findOne(filter: FilterQuery<T>, sensitiveFields: string = '-__v'): Promise<T | null> {
@@ -52,15 +69,15 @@ export abstract class BaseRepository<T> {
             .exec();
     }
 
-    public async delete(filter: FilterQuery<T>): Promise<boolean> {
-        const result = await this.model.deleteOne(filter).exec();
-        return result.deletedCount > 0;
-    }
-
     public async deleteSoft(filter: FilterQuery<T>): Promise<T | null> {
         return await this.model
             .findOneAndUpdate(filter, { $set: { isDeleted: true } as any }, { new: true })
             .lean<T>()
             .exec();
+    }
+
+    public async delete(filter: FilterQuery<T>): Promise<boolean> {
+        const result = await this.model.deleteOne(filter).exec();
+        return result.deletedCount > 0;
     }
 }

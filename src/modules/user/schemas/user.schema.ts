@@ -1,6 +1,5 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { BaseDocumentModel } from 'common';
-import { Types } from 'mongoose';
 
 @Schema({
   collection: 'user',

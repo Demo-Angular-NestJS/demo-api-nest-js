@@ -8,11 +8,6 @@ import {
 } from 'class-validator';
 
 export class CreateUserDTO {
-  @Expose({ name: 'id' })
-  @IsOptional()
-  @Transform(({ value }) => value?.toString())
-  _id: string;
-
   @IsString()
   userName: string;
 
