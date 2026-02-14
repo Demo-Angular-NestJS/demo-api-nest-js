@@ -53,6 +53,7 @@ export class CreateToyDTO {
   @IsString({ each: true })
   imageUrls?: string[];
 
+  @IsOptional()
   @IsNotEmpty()
   @IsNumber()
   @Min(0.5)

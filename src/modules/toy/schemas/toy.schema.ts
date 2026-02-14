@@ -1,7 +1,7 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Schema as MongooseSchema } from 'mongoose';
 import { BaseDocumentModel } from 'common';
-import { Min, Max, IsNumber, IsNotEmpty } from 'class-validator';
+import { Min, Max, IsNumber, IsNotEmpty, IsOptional } from 'class-validator';
 
 @Schema({
   collection: 'toy',
@@ -40,8 +40,8 @@ export class Toy extends BaseDocumentModel {
   @Prop()
   imageUrls: string[];
 
-  @Prop({ required: true })
-  @IsNotEmpty()
+  @Prop()
+  @IsOptional()
   @IsNumber()
   @Min(0.5)
   @Max(5)

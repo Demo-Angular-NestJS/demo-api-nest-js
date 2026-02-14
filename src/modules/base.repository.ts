@@ -1,6 +1,5 @@
-import { Model, FilterQuery, UpdateQuery, HydratedDocument } from 'mongoose';
+import { Model, FilterQuery, UpdateQuery, HydratedDocument, QueryOptions } from 'mongoose';
 import { buildDefaultFilter, IBaseRepository, mapFilterCriteria, SearchRequestDTO } from 'common';
-import { switchMap } from 'rxjs';
 import { InternalServerErrorException } from '@nestjs/common';
 
 export abstract class BaseRepository<T> implements IBaseRepository<T> {
@@ -26,7 +25,7 @@ export abstract class BaseRepository<T> implements IBaseRepository<T> {
                 sortOptions = {};
             }
 
-            
+
             const [data, total] = await Promise.all([
                 this.model
                     .find(filter)
@@ -42,42 +41,84 @@ export abstract class BaseRepository<T> implements IBaseRepository<T> {
 
             return { data: data as T[], total };
         } catch (ex) {
-            throw new InternalServerErrorException(ex?.message ?? 'error');
+            throw new InternalServerErrorException(ex?.message ?? 'Find All operation failed');
         }
     }
 
     public async findOne(filter: FilterQuery<T>, sensitiveFields: string = '-__v'): Promise<T | null> {
-        return await this.model.findOne(filter).select(sensitiveFields).lean<T>().exec();
+        try {
+            return await this.model.findOne(filter).select(sensitiveFields).lean<T>().exec();
+        } catch (ex) {
+            throw new InternalServerErrorException(ex?.message ?? 'Find One operation failed');
+        }
     }
 
     public async findById(id: string, sensitiveFields: string = ''): Promise<T | null> {
-        return await this.model.findById(id).select(sensitiveFields).lean<T>().exec();
+        try {
+            return await this.model.findById(id).select(sensitiveFields).lean<T>().exec();
+        } catch (ex) {
+            throw new InternalServerErrorException(ex?.message ?? 'Find By Id operation failed');
+        }
     }
 
     public async create(data: Partial<T>): Promise<HydratedDocument<T>> {
-        const createdDocument = new this.model(data);
-        return (await createdDocument.save()) as any;
+        try {
+            const createdDocument = new this.model(data);
+            return (await createdDocument.save()) as any;
+        } catch (ex) {
+            throw new InternalServerErrorException(ex?.message ?? 'Create operation failed');
+        }
+    }
+
+    public async upsert(filter: FilterQuery<T>, updateData: UpdateQuery<T>, insertOnlyData: Record<string, any> = {}): Promise<T | null> {
+        try {
+            const updateQuery: UpdateQuery<T> = {
+                $set: updateData,
+                $setOnInsert: insertOnlyData
+            };
+            const options: QueryOptions<T> = {
+                new: true,
+                upsert: true,
+                runValidators: true,
+                setDefaultsOnInsert: true,
+            };
+
+            return await this.model.findOneAndUpdate(filter, updateQuery, options).lean<T>().exec();
+        } catch (ex) {
+            throw new InternalServerErrorException(ex?.message ?? 'Upsert operation failed');
+        }
     }
 
     public async update(filter: FilterQuery<T>, data: UpdateQuery<T>): Promise<T | null> {
-        return await this.model
-            .findOneAndUpdate(filter, { $set: data }, {
+        try {
+            const options: QueryOptions<T> = {
                 new: true,
                 runValidators: true,
-            })
-            .lean<T>()
-            .exec();
+            };
+
+            return await this.model.findOneAndUpdate(filter, { $set: data }, options).lean<T>().exec();
+        } catch (ex) {
+            throw new InternalServerErrorException(ex?.message ?? 'Update operation failed');
+        }
     }
 
     public async deleteSoft(filter: FilterQuery<T>): Promise<T | null> {
-        return await this.model
-            .findOneAndUpdate(filter, { $set: { isDeleted: true } as any }, { new: true })
-            .lean<T>()
-            .exec();
+        try {
+            return await this.model
+                .findOneAndUpdate(filter, { $set: { isDeleted: true } as any }, { new: true })
+                .lean<T>()
+                .exec();
+        } catch (ex) {
+            throw new InternalServerErrorException(ex?.message ?? 'Delete Soft operation failed');
+        }
     }
 
     public async delete(filter: FilterQuery<T>): Promise<boolean> {
-        const result = await this.model.deleteOne(filter).exec();
-        return result.deletedCount > 0;
+        try {
+            const result = await this.model.deleteOne(filter).exec();
+            return result.deletedCount > 0;
+        } catch (ex) {
+            throw new InternalServerErrorException(ex?.message ?? 'Delete operation failed');
+        }
     }
 }

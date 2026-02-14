@@ -33,7 +33,7 @@ export abstract class BaseController<T, CreateDTO, UpdateDTO, ResponseDTO> {
         try {
             const result = await this.service.getByFilter({ _id: new Types.ObjectId(id) } as any);
             return this.transform(result);
-        } catch (ex) { 
+        } catch (ex) {
             throw new InternalServerErrorException(ex.message);
         }
     }
@@ -44,16 +44,33 @@ export abstract class BaseController<T, CreateDTO, UpdateDTO, ResponseDTO> {
         return this.transform(created);
     }
 
+    @Post('upsert')
+    public async upsert(
+        @Body() payload: UpdateDTO,
+        @Req() req: AuthenticatedRequestModel,
+    ) {
+        const identifier = (payload as any).id;
+
+        if (!identifier) {
+            const created = await this.service.create(payload as any, req?.user?.sub);
+            return this.transform(created);
+        }
+
+        const filter = { _id: identifier };
+        const result = await this.service.update(filter, payload, req?.user?.sub);
+
+        return this.transform(result);
+    }
+
     @Patch(':id')
     public async update(
         @Param('id') id: string,
         @Body() updateDto: UpdateDTO,
         @Req() req: AuthenticatedRequestModel,
     ) {
-        const updated = await this.service.update(
-            { _id: id } as any,
-            updateDto, req?.user?.sub
-        );
+        const filter = { _id: id } as any;
+        const updated = await this.service.update(filter, updateDto, req?.user?.sub);
+
         return this.transform(updated);
     }
 

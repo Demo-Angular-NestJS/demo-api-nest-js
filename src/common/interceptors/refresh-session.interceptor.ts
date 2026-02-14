@@ -13,7 +13,7 @@ export class RefreshSessionInterceptor implements NestInterceptor {
   intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
     const request = context.switchToHttp().getRequest();
     const response = context.switchToHttp().getResponse<Response>();
-    const user: JWTTokenDTO = request.user; // Set by your JwtStrategy
+    const user: JWTTokenDTO = request.user;
 
     return next.handle().pipe(
       tap(() => {

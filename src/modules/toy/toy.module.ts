@@ -1,7 +1,6 @@
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 import { Toy, ToySchema } from './schemas/toy.schema';
-import { Category, CategorySchema } from 'modules/category/schema/category.schema';
 import { ToyController } from './toy.controller';
 import { ToyService } from './toy.service';
 import { ToyRepository } from './toy.repository';
@@ -17,6 +16,6 @@ import { CategoryModule } from 'modules/category/category.module';
   ],
   controllers: [ToyController],
   providers: [ToyService, ToyRepository],
-  exports: [ToyService],
+  exports: [MongooseModule, ToyService],
 })
 export class ToyModule { }

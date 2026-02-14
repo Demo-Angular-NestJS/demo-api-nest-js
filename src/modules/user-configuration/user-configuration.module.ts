@@ -5,13 +5,12 @@ import { UserConfigurationService } from './user-configuration.service';
 import { UserConfigurationRepository } from './user-configuration.repository';
 import { UserConfigurationController } from './user-configuration.controller';
 
-
 @Module({
   imports: [
     MongooseModule.forFeature([{ name: UserConfiguration.name, schema: UserConfigurationSchema }]),
   ],
   controllers: [UserConfigurationController],
   providers: [UserConfigurationService, UserConfigurationRepository],
-  exports: [UserConfigurationService],
+  exports: [MongooseModule, UserConfigurationService],
 })
 export class UserConfigurationModule {}

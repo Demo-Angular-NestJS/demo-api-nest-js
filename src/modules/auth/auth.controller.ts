@@ -32,7 +32,7 @@ export class AuthController {
         response.cookie((process.env.COOKIE_NAME || 'cn'), accessToken, {
             httpOnly: true, // Prevents JavaScript from reading the cookie
             secure: process.env.NODE_ENV === 'production', // Only send over HTTPS in production
-            maxAge: +(process.env.COOKIE_LIFE_TIME_MS || '300000'), // 15 min, default 5 min
+            maxAge: +(process.env.COOKIE_LIFE_TIME_MS || '300000'), // default 5 min
             sameSite: 'lax',
         });
 

@@ -1,5 +1,6 @@
 import { BadRequestException, ConflictException, Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
 import { plainToInstance } from 'class-transformer';
+import { formatStringName } from 'common/helper';
 import type { IBaseRepository, IBaseService } from 'common/interface';
 
 @Injectable()
@@ -41,6 +42,28 @@ export abstract class BaseService<T, DTO> implements IBaseService<DTO> {
             };
 
             const entity = await this.repository.create(inputDto);
+
+            return plainToInstance(this.dtoClass, entity, {
+                excludeExtraneousValues: true,
+                enableImplicitConversion: true,
+            });
+        } catch (error) {
+            this.handleDatabaseErrors(error);
+        }
+    }
+
+    public async upsert(filter: Record<string, any>, inputDto: any, userId?: string): Promise<DTO> {
+        try {
+            const updateData = {
+                ...inputDto,
+                updatedBy: userId || null,
+            };
+
+            const insertOnlyData = {
+                createdBy: userId || null,
+            };
+
+            const entity = await this.repository.upsert(filter, updateData, insertOnlyData);
 
             return plainToInstance(this.dtoClass, entity, {
                 excludeExtraneousValues: true,
@@ -108,21 +131,38 @@ export abstract class BaseService<T, DTO> implements IBaseService<DTO> {
     private handleDatabaseErrors(error: any): never {
         if (error.code === 11000) {
             const field = Object.keys(error.keyPattern)[0];
-            throw new ConflictException(`The ${field} is already in use.`);
+            const readableField = formatStringName(field);
+
+            throw new ConflictException(
+                `${readableField} is already registered. Please use a different value.`
+            );
         }
 
         switch (error.name) {
             case 'ValidationError':
-                throw new BadRequestException(error.message);
+                const messages = Object.values(error.errors).map((err: any) => {
+                    if (err.kind === 'required') {
+                        const friendlyField = formatStringName(err.path);
+                        return `The field "${friendlyField}" is mandatory.`;
+                    }
+                    return err.message;
+                });
+
+                throw new BadRequestException({
+                    message: 'Data validation failed',
+                    errors: messages
+                });
             case 'CastError':
-                throw new BadRequestException(`Invalid format for field: ${error.path}`);
+                const path = formatStringName(error.path);
+                throw new BadRequestException(`The value provided for "${path}" is invalid. Please check the format.`);
+            case 'DocumentNotFoundError':
             case 'NotFoundException':
-                throw new NotFoundException('Resource not found for deletion');
+                throw new NotFoundException('We couldn’t find the record you’re looking for. It may have been moved or deleted.');
             case 'ConflictException':
                 throw new ConflictException(error.message);
-                break;
             default:
-                throw new InternalServerErrorException('An unexpected database error occurred');
+                console.log('===> ', error.message);
+                throw new InternalServerErrorException('Something went wrong on our end. Please try again in a few moments.');
         }
     }
 }

@@ -1,4 +1,3 @@
-// repository-helper.ts
 import { FilterConditionEnum } from 'common/enum';
 import { FilterCriteriaDTO } from 'common/models';
 import { Model } from 'mongoose';
