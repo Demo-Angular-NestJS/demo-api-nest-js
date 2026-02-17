@@ -8,66 +8,60 @@ import {
     Inject,
 } from '@nestjs/common';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
-import { Reflector } from '@nestjs/core'; // Added Reflector
+import { Reflector } from '@nestjs/core';
 import * as cacheManager from 'cache-manager';
-import { from, Observable, of, throwError } from 'rxjs';
-import { tap, catchError, mergeMap } from 'rxjs/operators';
-import { createHash } from 'crypto';
+import { Observable, from, of, throwError } from 'rxjs';
+import { tap, catchError, switchMap } from 'rxjs/operators';
 
 @Injectable()
 export class IdempotencyInterceptor implements NestInterceptor {
-    constructor(
-        @Inject(CACHE_MANAGER) private cacheManager: cacheManager.Cache,
-        private reflector: Reflector,
-    ) { }
+    // Standardize TTLs (adjust if your cache-manager version uses seconds)
+    private readonly LOCK_TTL = 30000; // 30 seconds for "PROCESSING"
+    private readonly RESULT_TTL = 86400000; // 24 hours for final result
+
+    constructor(@Inject(CACHE_MANAGER) private cacheManager: cacheManager.Cache) { }
 
     async intercept(context: ExecutionContext, next: CallHandler): Promise<Observable<any>> {
         const request = context.switchToHttp().getRequest();
 
-        // 1. Only apply to mutating methods
         if (!['POST', 'PATCH', 'PUT'].includes(request.method)) {
             return next.handle();
         }
 
         const idempotencyKey = request.headers['idempotency-key'];
 
-        // IdempotencyKey required
         if (!idempotencyKey) {
-            throw new BadRequestException('Idempotency-Key header is required for this operation');
+            throw new BadRequestException('Idempotency-Key header is required');
         }
 
-        // Create hash of the body (Safety check)
-        const bodyHash = createHash('sha256')
-            .update(JSON.stringify(request.body ?? {}))
-            .digest('hex');
+        // We use the key directly because the Angular side already hashed the body into it.
+        const cacheKey = `idempotency:${idempotencyKey}`;
 
-        const cacheKey = `idempotency:${idempotencyKey}:${bodyHash}`;
-
-        //Cache Lookup
         const cachedRecord = await this.cacheManager.get(cacheKey);
 
         if (cachedRecord) {
             if (cachedRecord === 'PROCESSING') {
-                throw new ConflictException('Request with this key is already being processed');
+                // This prevents the "same time" race condition you mentioned
+                throw new ConflictException('Request is already being processed');
             }
             return of(cachedRecord);
         }
 
-        //Set Lock
-        await this.cacheManager.set(cacheKey, 'PROCESSING', 30000);
+        // Set the Lock
+        await this.cacheManager.set(cacheKey, 'PROCESSING', this.LOCK_TTL);
 
         return next.handle().pipe(
-            tap(async (response) => {
-                // Only cache actual successful responses
-                await this.cacheManager.set(cacheKey, response, 86400000);
+            switchMap(async (response) => {
+                // Save the result and return it
+                await this.cacheManager.set(cacheKey, response, this.RESULT_TTL);
+                return response;
             }),
             catchError((err) => {
-                // We use 'from' to handle the async cache deletion
-                // then mergeMap to ensure the original error is thrown
+                // If the actual logic fails, remove the lock so the user can try again
                 return from(this.cacheManager.del(cacheKey)).pipe(
-                    mergeMap(() => throwError(() => err))
+                    switchMap(() => throwError(() => err))
                 );
-            }),
+            })
         );
     }
 }
