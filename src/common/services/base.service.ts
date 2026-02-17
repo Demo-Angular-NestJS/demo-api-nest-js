@@ -161,7 +161,6 @@ export abstract class BaseService<T, DTO> implements IBaseService<DTO> {
             case 'ConflictException':
                 throw new ConflictException(error.message);
             default:
-                console.log('===> ', error.message);
                 throw new InternalServerErrorException('Something went wrong on our end. Please try again in a few moments.');
         }
     }

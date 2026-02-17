@@ -1,6 +1,6 @@
 import { FilterConditionEnum } from 'common/enum';
 import { FilterCriteriaDTO } from 'common/models';
-import { Model } from 'mongoose';
+import { Model, mongo } from 'mongoose';
 
 export const buildDefaultFilter = (model: Model<any>): Record<string, any> => {
     const filter: Record<string, any> = {};
@@ -20,9 +20,10 @@ export const mapFilterCriteria = (model: Model<any>, queryFilters: FilterCriteri
     const mongoFilter: Record<string, any> = {};
 
     queryFilters.forEach(({ fieldName, value, condition, dataType }) => {
+        const isDeepSearch = fieldName.includes('.');
         const schemaPath = model.schema.paths[fieldName];
 
-        if (!schemaPath) {
+        if (!isDeepSearch && !schemaPath) {
             return;
         }
 
@@ -30,39 +31,29 @@ export const mapFilterCriteria = (model: Model<any>, queryFilters: FilterCriteri
         switch (dataType) {
             case 'number':
                 processedValue = Number(value);
-                if (isNaN(processedValue)) {
-                    return;
-                }
+                if (isNaN(processedValue)) return;
                 break;
             case 'boolean':
                 processedValue = value === 'true' || value === true || value === '1' || value === 1;
                 break;
             case 'date':
                 processedValue = new Date(value);
-                if (isNaN(processedValue.getTime())) {
-                    return;
-
-                }
+                if (isNaN(processedValue.getTime())) return;
 
                 if (condition === FilterConditionEnum.GREATER_EQUAL || condition === FilterConditionEnum.GREATER_THAN) {
-                    // Ensure we are at the very start of the day
                     processedValue.setUTCHours(0, 0, 0, 0);
                 } else if (condition === FilterConditionEnum.LESS_EQUAL || condition === FilterConditionEnum.LESS_THAN) {
-                    // Ensure we include the full day by going to the last millisecond
                     processedValue.setUTCHours(23, 59, 59, 999);
                 }
-                // processedValue = date;
                 break;
             default:
                 processedValue = String(value);
         }
 
-        // Mongoose 'instance' helps us know if the DB field is actually a String, Boolean, etc.
-        const dbType = schemaPath.instance;
+        const dbType = isDeepSearch ? 'String' : schemaPath.instance;
 
         switch (condition) {
             case FilterConditionEnum.LIKE:
-                // Regex ONLY works on Strings. If applied to Boolean/Number, it causes CastError.
                 if (dbType === 'String') {
                     mongoFilter[fieldName] = { $regex: processedValue, $options: 'i' };
                 } else {
@@ -82,7 +73,6 @@ export const mapFilterCriteria = (model: Model<any>, queryFilters: FilterCriteri
             case FilterConditionEnum.GREATER_EQUAL:
             case FilterConditionEnum.LESS_THAN:
             case FilterConditionEnum.LESS_EQUAL:
-                // Comparison operators don't make sense for Booleans
                 if (dbType === 'Boolean') {
                     mongoFilter[fieldName] = processedValue;
                 } else {

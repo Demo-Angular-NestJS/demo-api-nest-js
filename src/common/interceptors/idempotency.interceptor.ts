@@ -28,6 +28,10 @@ export class IdempotencyInterceptor implements NestInterceptor {
             return next.handle();
         }
 
+        if (request.url.includes('/search')) {
+            return next.handle();
+        }
+
         const idempotencyKey = request.headers['idempotency-key'];
 
         if (!idempotencyKey) {

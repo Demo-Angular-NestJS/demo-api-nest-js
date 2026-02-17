@@ -1,4 +1,4 @@
-import { Model, FilterQuery, UpdateQuery, HydratedDocument, QueryOptions } from 'mongoose';
+import { Model, FilterQuery, UpdateQuery, HydratedDocument, QueryOptions, Types } from 'mongoose';
 import { buildDefaultFilter, IBaseRepository, mapFilterCriteria, SearchRequestDTO } from 'common';
 import { InternalServerErrorException } from '@nestjs/common';
 
@@ -21,11 +21,23 @@ export abstract class BaseRepository<T> implements IBaseRepository<T> {
                 filter = { ...filter, ...dynamicFilters };
             }
 
-            if (!this.model.schema.paths[sortBy]) {
+            if (!this.model.schema.paths[sortBy] && !sortBy.includes('.')) {
                 sortOptions = {};
             }
 
+            // DEEP SEARCH LOGIC
+            // Check if any filter key or sortBy uses a dot (e.g., "category.name")
+            const isDeepSearch = Object.keys(filter).some(key => key.includes('.')) || sortBy.includes('.');
 
+            if (isDeepSearch) {
+                return await this.executeAggregationSearch(filter, sortOptions, skip, itemsPerPage, sensitiveFields);
+            }
+
+            if (!this.model.schema.paths[sortBy]) {
+                sortOptions = {};
+            };
+
+            //STANDARD SEARCH LOGIC
             const [data, total] = await Promise.all([
                 this.model
                     .find(filter)
@@ -120,5 +132,107 @@ export abstract class BaseRepository<T> implements IBaseRepository<T> {
         } catch (ex) {
             throw new InternalServerErrorException(ex?.message ?? 'Delete operation failed');
         }
+    }
+
+    private async executeAggregationSearch(
+        filter: Record<string, any>,
+        sortOptions: any,
+        skip: number,
+        limit: number,
+        sensitiveFields: string
+    ): Promise<{ data: T[], total: number }> {
+        const pipeline: any[] = [];
+        const processedRelations = new Set<string>();
+        const deepFields = Object.keys(filter)
+            .filter(key => key.includes('.'))
+            .map(key => key.split('.')[0]);
+
+        deepFields.forEach(relationAlias => {
+            if (processedRelations.has(relationAlias)) {
+                return;
+            }
+
+            const localField = `${relationAlias}Id`;
+            const schemaPath = this.model.schema.paths[localField] as any;
+
+            if (schemaPath && schemaPath.options.ref) {
+                const foreignCollection = schemaPath.options.ref.toLowerCase();
+
+                pipeline.push(
+                    {
+                        $lookup: {
+                            from: foreignCollection,
+                            localField: localField,
+                            foreignField: '_id',
+                            as: relationAlias,
+                        },
+                    },
+                    {
+                        $unwind: {
+                            path: `$${relationAlias}`,
+                            preserveNullAndEmptyArrays: true,
+                        },
+                    }
+                );
+                processedRelations.add(relationAlias);
+            }
+        });
+
+        const castedFilter = this.castFilterTypes(filter);
+        pipeline.push({ $match: castedFilter });
+
+        if (Object.keys(sortOptions).length > 0) {
+            pipeline.push({ $sort: sortOptions });
+        }
+
+        pipeline.push({
+            $facet: {
+                metadata: [{ $count: 'total' }],
+                data: [
+                    { $skip: skip },
+                    { $limit: limit },
+                    { $project: this.convertSelectStringToProject(sensitiveFields) },
+                ],
+            },
+        });
+
+        const result = await this.model.aggregate(pipeline).exec();
+        return {
+            data: result[0]?.data || [],
+            total: result[0]?.metadata[0]?.total || 0
+        };
+    }
+
+    private castFilterTypes(filter: Record<string, any>): Record<string, any> {
+        const casted: Record<string, any> = {};
+        Object.keys(filter).forEach(key => {
+            let value = filter[key];
+
+            if (typeof value === 'string' && Types.ObjectId.isValid(value)) {
+                value = new Types.ObjectId(value);
+            }  else if (value && typeof value === 'object' && !('$regex' in value)) {
+                const op = Object.keys(value)[0];
+                let opVal = value[op];
+                if (opVal === 'true' || opVal === true) opVal = true;
+                if (opVal === 'false' || opVal === false) opVal = false;
+                if (typeof opVal === 'string' && Types.ObjectId.isValid(opVal)) opVal = new Types.ObjectId(opVal);
+                value = { [op]: opVal };
+            }
+
+            casted[key] = value;
+        });
+        return casted;
+    }
+
+    private convertSelectStringToProject(select: string): Record<string, number> {
+        const project: any = {};
+        select.split(' ').forEach((field) => {
+            if (field.startsWith('-')) {
+                project[field.substring(1)] = 0
+            } else if (field) {
+                project[field] = 1
+            };
+        });
+        return project;
     }
 }

@@ -10,7 +10,7 @@ export abstract class BaseController<T, CreateDTO, UpdateDTO, ResponseDTO> {
         private readonly responseDto: new (data: any) => ResponseDTO,
     ) { }
 
-    @Post('Search')
+    @Post('search')
     public async search(
         @Body() payload: SearchRequestDTO,
         @Res({ passthrough: true }) res: Response
@@ -18,7 +18,7 @@ export abstract class BaseController<T, CreateDTO, UpdateDTO, ResponseDTO> {
         const { data, total } = await this.service.search(payload);
 
         res.append('X-Total-Count', total.toString());
-
+        res.set('Access-Control-Expose-Headers', 'X-Total-Count');
         return data;
     }
 
