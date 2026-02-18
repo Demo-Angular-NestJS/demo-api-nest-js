@@ -50,7 +50,7 @@ export class UserRepository extends BaseRepository<User> {
   }
 
   public async updatePassword(userId: string, changePasswordDTO: ChangePasswordDTO): Promise<boolean> {
-    const user = await this.findById(userId, '+password');
+    const user = await this.getById(userId, '+password');
 
     if (!user) {
       throw new NotFoundException('User not found');

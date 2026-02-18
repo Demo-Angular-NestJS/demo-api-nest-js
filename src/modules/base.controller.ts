@@ -31,8 +31,8 @@ export abstract class BaseController<T, CreateDTO, UpdateDTO, ResponseDTO> {
     @Get(':id')
     public async getById(@Param('id') id: string) {
         try {
-            const result = await this.service.getByFilter({ _id: new Types.ObjectId(id) } as any);
-            return this.transform(result);
+            const result = await this.service.getById(id);
+            return result;
         } catch (ex) {
             throw new InternalServerErrorException(ex.message);
         }
@@ -40,8 +40,7 @@ export abstract class BaseController<T, CreateDTO, UpdateDTO, ResponseDTO> {
 
     @Post()
     public async create(@Body() createDto: CreateDTO, @Req() req: AuthenticatedRequestModel) {
-        const created = await this.service.create(createDto, req?.user?.sub);
-        return this.transform(created);
+        return await this.service.create(createDto, req?.user?.sub);
     }
 
     @Post('upsert')
@@ -49,17 +48,13 @@ export abstract class BaseController<T, CreateDTO, UpdateDTO, ResponseDTO> {
         @Body() payload: UpdateDTO,
         @Req() req: AuthenticatedRequestModel,
     ) {
-        const identifier = (payload as any).id;
+        const id = (payload as any).id || (payload as any)._id;
 
-        if (!identifier) {
-            const created = await this.service.create(payload as any, req?.user?.sub);
-            return this.transform(created);
+        if (id) {
+            return await this.service.upsert({ _id: id }, payload, req?.user?.sub);
         }
 
-        const filter = { _id: identifier };
-        const result = await this.service.update(filter, payload, req?.user?.sub);
-
-        return this.transform(result);
+        return await this.service.create(payload as any, req?.user?.sub);
     }
 
     @Patch(':id')
@@ -68,19 +63,22 @@ export abstract class BaseController<T, CreateDTO, UpdateDTO, ResponseDTO> {
         @Body() updateDto: UpdateDTO,
         @Req() req: AuthenticatedRequestModel,
     ) {
-        const filter = { _id: id } as any;
-        const updated = await this.service.update(filter, updateDto, req?.user?.sub);
+        return await this.service.update({ _id: id }, updateDto, req?.user?.sub);
+    }
 
-        return this.transform(updated);
+    @Delete('soft/:id')
+    @HttpCode(HttpStatus.NO_CONTENT)
+    public async deleteSoft(@Param('id') id: string) {
+        return await this.service.delete({ _id: id }, true);
     }
 
     @Delete(':id')
     @HttpCode(HttpStatus.NO_CONTENT)
-    public async deleteSoft(@Param('id') id: string) {
-        return await this.service.deleteSoft({ _id: id });
+    public async delete(@Param('id') id: string) {
+        return await this.service.delete({ _id: id });
     }
 
-    private transform(data: any): ResponseDTO {
+    public transform(data: any): ResponseDTO {
         if (!data) return data;
         const plainData = data instanceof Document ? data.toObject() : data;
         return new this.responseDto(plainData);

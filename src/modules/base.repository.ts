@@ -11,17 +11,18 @@ export abstract class BaseRepository<T> implements IBaseRepository<T> {
         populateFields: string[] = [],
     ): Promise<{ data: T[], total: number }> {
         try {
-            const { searchCriteria, page, itemsPerPage, sortBy, sortOrder } = query;
+            let { searchCriteria, page, itemsPerPage, sortBy, sortOrder } = query;
             const skip = (page - 1) * itemsPerPage;
             let sortOptions = { [sortBy]: sortOrder === 'asc' ? 1 : -1 };
             let filter: Record<string, any> = buildDefaultFilter(this.model);
+            sortBy = sortBy || '';
 
             if (searchCriteria && searchCriteria.length) {
                 const dynamicFilters = mapFilterCriteria(this.model, searchCriteria);
                 filter = { ...filter, ...dynamicFilters };
             }
 
-            if (!this.model.schema.paths[sortBy] && !sortBy.includes('.')) {
+            if (!this.model.schema.paths[sortBy] && !(sortBy).includes('.')) {
                 sortOptions = {};
             }
 
@@ -65,7 +66,7 @@ export abstract class BaseRepository<T> implements IBaseRepository<T> {
         }
     }
 
-    public async findById(id: string, sensitiveFields: string = ''): Promise<T | null> {
+    public async getById(id: string, sensitiveFields: string = ''): Promise<T | null> {
         try {
             return await this.model.findById(id).select(sensitiveFields).lean<T>().exec();
         } catch (ex) {

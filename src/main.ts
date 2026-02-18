@@ -41,8 +41,8 @@ async function bootstrap() {
 
   app.useGlobalPipes(
     new ValidationPipe({
-      whitelist: true, // Strips away properties that don't exist in the DTO
-      forbidNonWhitelisted: true, // Throws error if unknown properties are sent
+      whitelist: true, //Automatically remove properties that do not have any decorators in the DTO
+      forbidNonWhitelisted: false, // Stops NestJS from throwing an error when extra properties are found.
       transform: true, // Automatically transforms payloads to DTO instances
       transformOptions: {
         enableImplicitConversion: true, // Helps with DTOs converstion

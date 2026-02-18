@@ -4,6 +4,7 @@ import { UserModule } from './user/user.module';
 import { UserConfigurationModule } from './user-configuration/user-configuration.module';
 import { CategoryModule } from './category/category.module';
 import { ToyModule } from './toy/toy.module';
+import { FavoriteModule } from './favorite/favorite.module';
 
 @Global()
 @Module({
@@ -13,6 +14,7 @@ import { ToyModule } from './toy/toy.module';
         UserConfigurationModule,
         CategoryModule,
         ToyModule,
+        FavoriteModule,
     ],
 })
 export class ModulesModule { }

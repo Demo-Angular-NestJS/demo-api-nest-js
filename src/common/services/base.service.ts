@@ -12,41 +12,38 @@ export abstract class BaseService<T, DTO> implements IBaseService<DTO> {
 
     public async search(query: any): Promise<{ data: DTO[], total: number }> {
         const { data, total } = await this.repository.findAll(query);
-
-        const transformedData = plainToInstance(this.dtoClass, data, {
-            excludeExtraneousValues: true,
-        });
-
-        return { data: transformedData, total };
+        return { data: this.transformMany(data), total };
     }
 
     public async getByFilter(filter: Partial<T>): Promise<DTO> {
         const entity = await this.repository.findOne(filter);
 
         if (!entity) {
-            const filterStr = JSON.stringify(filter);
-            throw new NotFoundException(`Resource with criteria ${filterStr} not found`);
+            throw new NotFoundException(`Resource not found for the given criteria.`);
         }
 
-        return plainToInstance(this.dtoClass, entity, {
-            excludeExtraneousValues: true,
-            enableImplicitConversion: true,
-        });
+        return this.transform(entity);
+    }
+
+    public async getById(id: string, sensitiveFields: string = ''): Promise<DTO> {
+        try {
+            const entity = await this.repository.getById(id, sensitiveFields);
+
+            if (!entity) {
+                throw new NotFoundException(`Resource with ID ${id} not found.`);
+            }
+
+            return this.transform(entity);
+        } catch (error) {
+            this.handleDatabaseErrors(error);
+        }
     }
 
     public async create(inputDto: any, userId?: string): Promise<DTO> {
         try {
-            inputDto = {
-                ...inputDto,
-                createdBy: userId || null,
-            };
-
-            const entity = await this.repository.create(inputDto);
-
-            return plainToInstance(this.dtoClass, entity, {
-                excludeExtraneousValues: true,
-                enableImplicitConversion: true,
-            });
+            const data = { ...inputDto, createdBy: userId || null };
+            const entity = await this.repository.create(data);
+            return this.transform(entity);
         } catch (error) {
             this.handleDatabaseErrors(error);
         }
@@ -54,21 +51,17 @@ export abstract class BaseService<T, DTO> implements IBaseService<DTO> {
 
     public async upsert(filter: Record<string, any>, inputDto: any, userId?: string): Promise<DTO> {
         try {
+            const { createdBy, ...restOfDto } = inputDto;
             const updateData = {
-                ...inputDto,
-                updatedBy: userId || null,
+                ...restOfDto,
+                updatedBy: userId || null
             };
-
             const insertOnlyData = {
-                createdBy: userId || null,
+                createdBy: userId || null
             };
-
             const entity = await this.repository.upsert(filter, updateData, insertOnlyData);
 
-            return plainToInstance(this.dtoClass, entity, {
-                excludeExtraneousValues: true,
-                enableImplicitConversion: true,
-            });
+            return this.transform(entity);
         } catch (error) {
             this.handleDatabaseErrors(error);
         }
@@ -76,34 +69,27 @@ export abstract class BaseService<T, DTO> implements IBaseService<DTO> {
 
     public async update(filter: Record<string, any>, inputDto: any, userId?: string): Promise<DTO> {
         try {
-            inputDto = {
-                ...inputDto,
-                updatedBy: userId,
-            };
-
-            const entity = await this.repository.update(filter, inputDto);
+            const data = { ...inputDto, updatedBy: userId || null };
+            const entity = await this.repository.update(filter, data);
 
             if (!entity) {
-                throw new NotFoundException(`Resource not found for update with criteria ${JSON.stringify(filter)}`);
+                throw new NotFoundException('Resource not found for update.');
             }
 
-            return plainToInstance(this.dtoClass, entity, {
-                excludeExtraneousValues: true,
-                enableImplicitConversion: true,
-            });
+            return this.transform(entity);
         } catch (error) {
             this.handleDatabaseErrors(error);
         }
     }
 
-    public async deleteSoft(filter: Record<string, any>): Promise<boolean> {
+    public async delete(filter: Record<string, any>, soft: boolean = false): Promise<boolean> {
         try {
-            const deleted = await this.repository.deleteSoft(filter);
+            const deleted = soft
+                ? await this.repository.deleteSoft(filter)
+                : await this.repository.delete(filter);
 
             if (!deleted) {
-                throw new NotFoundException(
-                    `Resource not found for deletion with criteria ${JSON.stringify(filter)}`
-                );
+                throw new NotFoundException('Resource not found for deletion.');
             }
 
             return true;
@@ -112,30 +98,27 @@ export abstract class BaseService<T, DTO> implements IBaseService<DTO> {
         }
     }
 
-    public async delete(filter: Record<string, any>): Promise<boolean> {
-        try {
-            const deleted = await this.repository.delete(filter);
+    protected transform(data: any): DTO {
+        const plainData = data.toObject ? data.toObject() : data;
 
-            if (!deleted) {
-                throw new NotFoundException(
-                    `Resource not found for deletion with criteria ${JSON.stringify(filter)}`
-                );
-            }
+        return plainToInstance(this.dtoClass, plainData, {
+            excludeExtraneousValues: true,
+            enableImplicitConversion: true,
+        });
+    }
 
-            return true;
-        } catch (error) {
-            this.handleDatabaseErrors(error);
-        }
+    protected transformMany(data: any[]): DTO[] {
+        return (data || []).map(item => this.transform(item));
     }
 
     private handleDatabaseErrors(error: any): never {
+        if (error instanceof NotFoundException || error instanceof ConflictException || error instanceof BadRequestException) {
+            throw error;
+        }
+
         if (error.code === 11000) {
             const field = Object.keys(error.keyPattern)[0];
-            const readableField = formatStringName(field);
-
-            throw new ConflictException(
-                `${readableField} is already registered. Please use a different value.`
-            );
+            throw new ConflictException(`${formatStringName(field)} is already registered.`);
         }
 
         switch (error.name) {
@@ -161,7 +144,7 @@ export abstract class BaseService<T, DTO> implements IBaseService<DTO> {
             case 'ConflictException':
                 throw new ConflictException(error.message);
             default:
-                throw new InternalServerErrorException('Something went wrong on our end. Please try again in a few moments.');
+                throw new InternalServerErrorException('An unexpected error occurred.');
         }
     }
 }
