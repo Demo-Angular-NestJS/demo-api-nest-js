@@ -35,6 +35,8 @@ src/
 │   └── controllers/     # API Endpoints
 └── main.ts              # App entry point & Global configs
 
+---
+
 ## Contact & Portfolio
 I am a Fullstack Developer dedicated to building secure, performant, and user-centric web applications. 
 
