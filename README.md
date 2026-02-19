@@ -34,3 +34,12 @@ src/
 │   ├── services/        # Business Logic
 │   └── controllers/     # API Endpoints
 └── main.ts              # App entry point & Global configs
+
+## Contact & Portfolio
+I am a Fullstack Developer dedicated to building secure, performant, and user-centric web applications. 
+
+* **GitHub:** [@judeth82](https://github.com/judeth82)
+* **LinkedIn:** [Abel Judeth Cota Nevarez](www.linkedin.com/in/abel-cota)
+
+---
+*This project was built to demonstrate proficiency in modern Angular ecosystems and enterprise security standards.*
