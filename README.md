@@ -30,7 +30,7 @@ The system follows a modular **Controller-Service-Repository** pattern, promotin
 
 ---
 
-## Contact & Portfolio
+### Contact & Portfolio
 I am a full-stack developer dedicated to building secure, performant, and user-centric web applications. 
 
 * **GitHub:** [@judeth82](https://github.com/judeth82)
