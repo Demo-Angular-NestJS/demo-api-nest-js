@@ -26,7 +26,8 @@ export class FavoriteController extends BaseController<Favorite, CreateFavoriteD
       return null;
     }
 
-    return this.transform(result.toObject());
+    const toy = await this.toyService.getById(dto.toyId ?? '');
+    return this.transform({ ...result.toObject(), toy: toy });
   }
 
   @Get('current')
