@@ -38,7 +38,7 @@ I am a full-stack developer dedicated to building secure, performant, and user-c
 
 ---
 
-*This project was built to demonstrate proficiency in modern Angular ecosystems and enterprise security standards.*
+*This project was built to demonstrate proficiency in modern NestJS and backend ecosystems and enterprise security standards.*
 
 ---
 
