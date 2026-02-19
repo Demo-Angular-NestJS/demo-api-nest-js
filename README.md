@@ -1,47 +1,56 @@
-# NestJS Enterprise Backend
+# NestJS Enterprise-Grade API
 
-A robust, secure, and highly scalable REST API built with **NestJS**, designed to handle high-concurrency environments with a focus on data integrity and security.
+[![NestJS Version](https://img.shields.io/badge/NestJS-v11+-E0234E?style=flat&logo=nestjs)](https://nestjs.com)
+[![MongoDB](https://img.shields.io/badge/MongoDB-Mongoose-47A248?style=flat&logo=mongodb)](https://mongoosejs.com)
+[![Security](https://img.shields.io/badge/Security-OWASP_Aligned-blue)](#security--authentication)
 
-## Technical Architecture & Patterns
-
-This backend follows the **Controller-Service-Repository** pattern, ensuring a clean separation of concerns and high testability.
-
-### Security & Authentication
-* **JWT & HttpOnly Cookies:** Implemented a secure authentication flow where the Access Token is stored in an `HttpOnly`, `SameSite: Strict` cookie, mitigating XSS and CSRF attacks.
-* **CORS Configuration:** Strict Cross-Origin Resource Sharing (CORS) policies to ensure only authorized frontend domains can interact with the API.
-* **Encrypted Payloads:** Standardizing sensitive data handling across all entry points.
-
-### Data Integrity & Validation
-* **DTOs (Data Transfer Objects):** Rigorous input definition using `class-validator` and `class-transformer`.
-* **Validation Pipes:** Global pipes to ensure all incoming requests are sanitized and validated before reaching the business logic.
-* **Mongoose (MongoDB):** Advanced schema modeling with indexes for optimized query performance and data consistency.
-
-### Advanced API Features
-* **Idempotency Logic:** Custom implementation to handle duplicate requests. Using a unique `X-Idempotency-Key`, the server ensures that retrying a failed network request doesn't result in duplicate database entries (critical for payments/creations).
-* **Global Interceptors:** * **Transform Interceptor:** Standardizes all API responses into a consistent JSON format.
-    * **Logging Interceptor:** Tracks request latency and performance bottlenecks.
-* **Exception Filters:** Centralized error handling to provide clear, developer-friendly error messages without leaking sensitive stack traces.
+A robust, secure, and highly scalable RESTful API built with **NestJS**. This backend is engineered to handle high-concurrency environments with a focus on **strict data integrity** and **defense-in-depth security**.
 
 ---
 
-## Folder Structure
-```text
-src/
-├── common/              # Interceptors, Filters, Pipes, Middlewares
-├── modules/             # Feature-based modules (Auth, Users, etc.)
-│   ├── dto/             # Data Transfer Objects
-│   ├── schemas/         # Mongoose Models
-│   ├── services/        # Business Logic
-│   └── controllers/     # API Endpoints
-└── main.ts              # App entry point & Global configs
+## Technical Architecture & Patterns
+
+The system follows a modular **Controller-Service-Repository** pattern, promoting high testability, low coupling, and clear separation of concerns.
+
+### Security & Authentication
+* **JWT via HttpOnly Cookies:** Implemented a stateless yet secure auth flow using `HttpOnly`, `Secure`, and `SameSite: Strict` cookies to effectively mitigate **XSS** and **CSRF** vulnerabilities.
+* **Granular CORS Policy:** Strict Cross-Origin Resource Sharing configuration to whitelist only trusted environments.
+* **Request Sanitization:** Automatic stripping of non-whitelisted properties from payloads to prevent **Mass Assignment** attacks using `whitelist: true` in Global Pipes.
+
+### Data Integrity & Validation
+* **Strict Type-Safety (DTOs):** Utilizing `class-validator` and `class-transformer` for runtime schema enforcement.
+* **Mongoose ODM:** Advanced MongoDB modeling with optimized indexing and automated schema-to-document transformation.
+* **Global Validation Pipes:** Unified input validation ensuring that only "clean" data ever reaches the business logic.
+
+### Professional API Features
+* **Distributed Idempotency:** Custom logic using a unique `X-Idempotency-Key` header. This prevents duplicate transactions (e.g., accidental double payments or resource creations) during network retries or client-side latency.
+* **Global Interceptors:** * **Transform:** Standardizes all API responses into a predictable, unified JSON wrapper.
+    * **Logging:** Real-time monitoring of request latency and system performance.
+* **Centralized Exception Filters:** Global error handling that maps internal exceptions to clean, user-friendly HTTP responses while securing sensitive stack traces.
 
 ---
 
 ## Contact & Portfolio
-I am a Fullstack Developer dedicated to building secure, performant, and user-centric web applications. 
+I am a full-stack developer dedicated to building secure, performant, and user-centric web applications. 
 
 * **GitHub:** [@judeth82](https://github.com/judeth82)
 * **LinkedIn:** [Abel Judeth Cota Nevarez](www.linkedin.com/in/abel-cota)
 
 ---
+
 *This project was built to demonstrate proficiency in modern Angular ecosystems and enterprise security standards.*
+
+---
+
+## 🏗️ Folder Structure
+
+```text
+src/
+├── common/             # Global Interceptors, Filters, Pipes, and Middlewares
+├── modules/            # Domain-driven feature modules
+│   ├── [feature]/
+│   │   ├── dto/        # Data Transfer Objects & Validation rules
+│   │   ├── schemas/    # Mongoose/MongoDB data models
+│   │   ├── services/   # Encapsulated Business Logic
+│   │   └── controllers/# Request routing & Response handling
+└── main.ts             # Application bootstrapping & Global configuration
