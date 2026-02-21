@@ -5,10 +5,12 @@ import { UserConfigurationModule } from './user-configuration/user-configuration
 import { CategoryModule } from './category/category.module';
 import { ToyModule } from './toy/toy.module';
 import { FavoriteModule } from './favorite/favorite.module';
+import { CustomMailerModule } from './custom-mailer.module';
 
 @Global()
 @Module({
     imports: [
+        CustomMailerModule,
         AuthModule,
         UserModule,
         UserConfigurationModule,
@@ -16,5 +18,14 @@ import { FavoriteModule } from './favorite/favorite.module';
         ToyModule,
         FavoriteModule,
     ],
+    exports: [
+        CustomMailerModule,
+        AuthModule,
+        UserModule,
+        UserConfigurationModule,
+        CategoryModule,
+        ToyModule,
+        FavoriteModule,
+    ]
 })
 export class ModulesModule { }

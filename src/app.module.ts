@@ -10,11 +10,9 @@ import { ModulesModule } from 'modules/modules.module';
 
 @Module({
   imports: [
-    // 1. Setup Config with Global access
     ConfigModule.forRoot({
       isGlobal: true,
     }),
-    // 2. Async Mongoose Setup
     DatabaseModule,
     CacheModule.register({
       isGlobal: true,

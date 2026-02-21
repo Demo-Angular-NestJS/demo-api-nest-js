@@ -3,7 +3,7 @@ import type { Response, Request } from 'express';
 import { JwtService } from '@nestjs/jwt';
 import { StringValue } from 'ms';
 import { AuthService } from './auth.service';
-import { JWTTokenDTO, Public, StringService } from 'common';
+import { EmailService, JWTTokenDTO, Public, StringService } from 'common';
 import { LoginRequestDTO } from './dto/login-request.dto';
 import { LoginResponseDTO } from './dto/login-response.dto';
 import { generateCsrfToken } from 'common/middleware';
@@ -14,9 +14,10 @@ export class AuthController {
         private authService: AuthService,
         private stringService: StringService,
         private jwtService: JwtService,
+        private _emailService: EmailService,
     ) { }
 
-    @Public() // This route is now accessible without a cookie/JWT
+    @Public()
     @Post('login')
     async login(
         @Body() loginRequestDTO: LoginRequestDTO,

@@ -5,18 +5,17 @@ import { UserResponseDTO } from './dto/user-response.dto';
 import { UserRepository } from './user.repository';
 import { CheckExistenceResponseDTO } from './dto/check-exist-response.dto.model';
 import { BaseService } from 'common/services/base.service';
-import { StringService } from 'common/services/string.service';
 import { UserConfigurationRepository } from 'modules/user-configuration/user-configuration.repository';
 import { ChangePasswordDTO } from './dto/change-password.dto';
-import { BCryptService } from 'common';
+import { BCryptService, EmailService, generateTempPassword, SendEmailModel, temporaryPasswordTemplateHTML, tempPassTempReplace } from 'common';
 
 @Injectable()
 export class UserService extends BaseService<User, UserResponseDTO> {
   constructor(
     protected readonly userRepository: UserRepository,
     private readonly userConfigurationRepository: UserConfigurationRepository,
+    private readonly _emailService: EmailService,
     private readonly bcryptService: BCryptService,
-    private readonly stringService: StringService,
   ) {
     super(userRepository, UserResponseDTO);
   }
@@ -29,7 +28,7 @@ export class UserService extends BaseService<User, UserResponseDTO> {
     if (!existingConfig) {
       await this.userConfigurationRepository.create({ userId: targetUserId.toString() });
     }
-    
+
     return user;
   }
 
@@ -42,6 +41,42 @@ export class UserService extends BaseService<User, UserResponseDTO> {
     const userWithEmail = await this.userRepository.findOne({ email });
 
     return { userNameExist: !!userWithUserName, emailExist: !!userWithEmail };
+  }
+
+  public async sendTemporaryPassword(email: string): Promise<void> {
+    try {
+      if (!email) {
+        return;
+      }
+
+      const user = await this.userRepository.findOne({ email });
+
+      if (!user) {
+        return;
+      }
+
+      const tempPassword = generateTempPassword(10);
+      console.log('===> NEW: ', tempPassword);
+
+      await this.userRepository.update({ _id: user._id }, { password: tempPassword });
+
+      const loginUrl = `${process.env.APP_URL}login`;
+      const htmlBody = temporaryPasswordTemplateHTML
+        .replace(tempPassTempReplace.loginUrl, loginUrl)
+        .replace(tempPassTempReplace.tempPassword, tempPassword);
+
+      const emailData: SendEmailModel = {
+        to: email,
+        subject: 'Your Temporary Password - ToyStore',
+        text: `Your temporary password is: ${tempPassword}. Log in here: ${loginUrl}`,
+        hmtl: htmlBody,
+      };
+
+      await this._emailService.sendEmail(emailData);
+    } catch(ex) {
+      console.log('Send Email for Temp Password: ', ex.message);
+      //Doesn't matter if ocurred an error, I don't want to let the client now if error sending
+    }
   }
 
   public async changePassword(userId: string, changePasswordDTO: ChangePasswordDTO): Promise<boolean> {

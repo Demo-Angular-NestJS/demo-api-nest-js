@@ -1,4 +1,5 @@
 export * from './decorators';
+export * from './email-templates';
 export * from './enum';
 export * from './filters';
 export * from './guards';
